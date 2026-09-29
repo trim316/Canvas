@@ -36,10 +36,12 @@ java {
     targetCompatibility = JavaVersion.VERSION_25
 }
 
+def canvasModVersion = project.mod_version
+
 processResources {
-    inputs.property "version", project.version
+    inputs.property "version", canvasModVersion
     filesMatching("fabric.mod.json") {
-        expand "version": project.version
+        expand "version": canvasModVersion
     }
 }
 
