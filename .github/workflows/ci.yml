@@ -9,10 +9,15 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: canvas-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+  build_server_gametest:
+    name: Build + server GameTests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -27,16 +32,82 @@ jobs:
         with:
           gradle-version: "9.5.1"
 
-      - name: Build and verify
+      - name: Build, unit tests, and real server GameTests
         run: gradle clean build --no-daemon --stacktrace
 
-      - name: Inspect Fabric metadata
-        run: |
-          python3 scripts/verify_artifact.py build/libs/*.jar
+      - name: Inspect Fabric runtime artifact
+        run: python3 scripts/verify_artifact.py build/libs/*.jar
 
-      - name: Upload proven candidate
+      - name: Upload server evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canvas-server-evidence
+          path: |
+            build/reports/**
+            build/test-results/**
+            build/run/gameTest/**
+          if-no-files-found: ignore
+
+      - name: Upload candidate JAR
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: canvas-26.2-candidate
-          path: build/libs/*.jar
+          path: |
+            build/libs/*.jar
+            !build/libs/*-sources.jar
           if-no-files-found: error
+
+  client_gametest:
+    name: Headless client + screenshots
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    needs: build_server_gametest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Install virtual display dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgl1-mesa-dri libgl1
+
+      - name: Set up Gradle 9.5.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.1"
+
+      - name: Launch production Minecraft client GameTests
+        run: gradle runProductionClientGameTest --no-daemon --stacktrace
+
+      - name: Upload client screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canvas-client-evidence
+          path: |
+            build/run/clientGameTest/screenshots/**
+            build/run/clientGameTest/logs/**
+            build/run/clientGameTest/crash-reports/**
+          if-no-files-found: ignore
+
+  candidate_gate:
+    name: Proven candidate gate
+    runs-on: ubuntu-24.04
+    needs: [build_server_gametest, client_gametest]
+    if: success()
+    steps:
+      - name: Candidate passed automated Minecraft validation
+        run: |
+          echo "Canvas candidate passed:"
+          echo "- Java 25 compilation"
+          echo "- Fabric Loom build for Minecraft 26.2"
+          echo "- server GameTests in real Minecraft"
+          echo "- headless production client GameTests under Xvfb"
+          echo "- artifact metadata inspection"
