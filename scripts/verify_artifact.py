@@ -50,6 +50,7 @@ required_resources = [
     "assets/canvas/sounds/cues/coming_home_lived_in.ogg",
     "assets/canvas/sounds/cues/rare_storm_break.ogg",
     "assets/canvas/sounds/cues/rare_golden_hush.ogg",
+    "assets/canvas/sounds/cues/rare_starlit_stillness.ogg",
     "assets/canvas/sounds/cues/calm_after_storm.ogg",
     "assets/canvas/sounds/presence/rain_on_roof.ogg",
     "assets/canvas/sounds/presence/thunder_shelter.ogg",
