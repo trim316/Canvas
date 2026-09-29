@@ -8,6 +8,7 @@ import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomecomingPolicy;
+import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
@@ -349,6 +350,57 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 true, false, false, false, 19000L, 7L, 12, -9, 99L);
         context.assertTrue(first == second,
                 "Rare-surprise selection must be deterministic for the same HOME/day context");
+        context.succeed();
+    }
+
+    @GameTest
+    public void nothingHappensGuardrailEnforcesQuietTime(GameTestHelper context) {
+        MomentDensityPolicy.Budget budget = new MomentDensityPolicy.Budget();
+        long tick = 1000L;
+        context.assertTrue(
+                budget.tryAcquire(MomentDensityPolicy.Kind.HOMECOMING, tick, false),
+                "The first meaningful moment should be allowed");
+        context.assertFalse(
+                budget.tryAcquire(MomentDensityPolicy.Kind.FAMILIAR_FACE, tick + 20L, false),
+                "Back-to-back presentations should be suppressed");
+
+        int accepted = 1;
+        for (int i = 1; i < 10; i++) {
+            if (budget.tryAcquire(
+                    MomentDensityPolicy.Kind.PHASE_SHIFT,
+                    tick + i * MomentDensityPolicy.GLOBAL_MIN_GAP_TICKS,
+                    false)) {
+                accepted++;
+            }
+        }
+        context.assertTrue(
+                accepted == MomentDensityPolicy.MAX_PRESENTATIONS_PER_WINDOW,
+                "A five-minute window must have a hard presentation ceiling");
+        context.assertTrue(
+                budget.suppressedCount() > 0,
+                "The guardrail must record suppressed candidate moments");
+        context.succeed();
+    }
+
+    @GameTest
+    public void nothingHappensGuardrailLimitsMusicDensity(GameTestHelper context) {
+        MomentDensityPolicy.Budget budget = new MomentDensityPolicy.Budget();
+        long tick = 2000L;
+        context.assertTrue(
+                budget.tryAcquire(MomentDensityPolicy.Kind.VILLAGE_RHYTHM, tick, true),
+                "First music moment should be allowed");
+        context.assertTrue(
+                budget.tryAcquire(
+                        MomentDensityPolicy.Kind.HOMECOMING,
+                        tick + MomentDensityPolicy.GLOBAL_MIN_GAP_TICKS,
+                        true),
+                "Second spaced music moment should be allowed");
+        context.assertFalse(
+                budget.tryAcquire(
+                        MomentDensityPolicy.Kind.VILLAGE_RHYTHM,
+                        tick + MomentDensityPolicy.GLOBAL_MIN_GAP_TICKS * 2L,
+                        true),
+                "Music must stay below its stricter density ceiling");
         context.succeed();
     }
 
