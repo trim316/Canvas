@@ -6,6 +6,7 @@ import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
 import net.canvasmod.HomeStatePayload;
 import net.canvasmod.HomecomingPolicy;
+import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -163,7 +164,8 @@ final class CanvasFeelClient {
             }
         }
         if (nextWeather == WeatherCharacterPolicy.Character.CALM_AFTER_STORM
-                && weatherCharacter != WeatherCharacterPolicy.Character.CALM_AFTER_STORM) {
+                && weatherCharacter != WeatherCharacterPolicy.Character.CALM_AFTER_STORM
+                && director.allowMoment(MomentDensityPolicy.Kind.WEATHER_TRANSITION, tick, false)) {
             playCue("feel.calm_after_storm", 0.26f, 1.03f);
         }
         weatherCharacter = nextWeather;
@@ -201,7 +203,10 @@ final class CanvasFeelClient {
         RareSurprisePolicy.Moment candidate = RareSurprisePolicy.classify(
                 atHome, previousRaining, raining, thundering, dayTime,
                 worldDay, homeX, homeZ, daysSinceLast);
-        if (candidate != RareSurprisePolicy.Moment.NONE) presentRareSurprise(candidate, worldDay);
+        if (candidate != RareSurprisePolicy.Moment.NONE
+                && director.allowMoment(MomentDensityPolicy.Kind.RARE_SURPRISE, tick, false)) {
+            presentRareSurprise(candidate, worldDay);
+        }
     }
 
     private void presentRareSurprise(RareSurprisePolicy.Moment moment, long worldDay) {
@@ -218,7 +223,8 @@ final class CanvasFeelClient {
         homeTransitionPulseTicks = 80;
 
         if (previous != CanvasFeelProfile.Phase.AWAY
-                && tick - lastPhaseCue >= PHASE_CUE_COOLDOWN) {
+                && tick - lastPhaseCue >= PHASE_CUE_COOLDOWN
+                && director.allowMoment(MomentDensityPolicy.Kind.PHASE_SHIFT, tick, false)) {
             playCue("feel.home_shift", 0.24f, CanvasFeelProfile.transitionPitch(next));
             lastPhaseCue = tick;
         }
@@ -263,9 +269,12 @@ final class CanvasFeelClient {
         client.player.sendSystemMessage(Component.literal("Canvas · Home recognized"));
         HomecomingPolicy.Plan plan = director.previewHomecoming();
         homecomingFlavor = plan.flavor();
-        playCue(plan.cueEvent(), Math.min(0.40f, plan.cueVolume()), plan.cuePitch());
-        if (!plan.musicEvent().isBlank()) playMusicMoment(plan.musicEvent(), 0.16f, plan.cuePitch());
-        homeTransitionPulseTicks = plan.pulseTicks();
+        boolean music = !plan.musicEvent().isBlank();
+        if (director.allowMoment(MomentDensityPolicy.Kind.HOMECOMING, tick, music)) {
+            playCue(plan.cueEvent(), Math.min(0.40f, plan.cueVolume()), plan.cuePitch());
+            if (music) playMusicMoment(plan.musicEvent(), 0.16f, plan.cuePitch());
+            homeTransitionPulseTicks = plan.pulseTicks();
+        }
     }
 
     private boolean isSheltered(BlockPos center) {
@@ -325,12 +334,13 @@ final class CanvasFeelClient {
             if (tick - awaySince >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
                 HomecomingPolicy.Plan plan = director.nextHomecoming();
                 homecomingFlavor = plan.flavor();
-                playCue(plan.cueEvent(), plan.cueVolume(), plan.cuePitch());
-                if (!plan.musicEvent().isBlank()) {
-                    playMusicMoment(plan.musicEvent(), 0.20f, plan.cuePitch());
+                boolean music = !plan.musicEvent().isBlank();
+                if (director.allowMoment(MomentDensityPolicy.Kind.HOMECOMING, tick, music)) {
+                    playCue(plan.cueEvent(), plan.cueVolume(), plan.cuePitch());
+                    if (music) playMusicMoment(plan.musicEvent(), 0.20f, plan.cuePitch());
+                    homeTransitionPulseTicks = plan.pulseTicks();
+                    lastReturnCue = tick;
                 }
-                homeTransitionPulseTicks = plan.pulseTicks();
-                lastReturnCue = tick;
             }
             awaySince = -1;
         }
