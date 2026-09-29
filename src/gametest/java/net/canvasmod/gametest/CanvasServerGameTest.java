@@ -326,6 +326,32 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.succeed();
     }
 
+    @GameTest
+    public void rareSurpriseV2AddsAThirdDeterministicMoment(GameTestHelper context) {
+        boolean foundStarlit = false;
+        int totalRareNights = 0;
+        for (long day = 0; day < 28; day++) {
+            RareSurprisePolicy.Moment moment = RareSurprisePolicy.classify(
+                    true, false, false, false, 19000L, day, 0, 0, 99L);
+            if (moment == RareSurprisePolicy.Moment.STARLIT_STILLNESS) {
+                foundStarlit = true;
+                totalRareNights++;
+            }
+        }
+        context.assertTrue(foundStarlit,
+                "The rare library should include a deterministic starlit-stillness moment");
+        context.assertTrue(totalRareNights >= 3 && totalRareNights <= 5,
+                "Starlit stillness must remain sparse over four Minecraft weeks: " + totalRareNights);
+
+        RareSurprisePolicy.Moment first = RareSurprisePolicy.classify(
+                true, false, false, false, 19000L, 7L, 12, -9, 99L);
+        RareSurprisePolicy.Moment second = RareSurprisePolicy.classify(
+                true, false, false, false, 19000L, 7L, 12, -9, 99L);
+        context.assertTrue(first == second,
+                "Rare-surprise selection must be deterministic for the same HOME/day context");
+        context.succeed();
+    }
+
     @Override
     public void invokeTestMethod(GameTestHelper context, Method method) throws ReflectiveOperationException {
         method.invoke(this, context);

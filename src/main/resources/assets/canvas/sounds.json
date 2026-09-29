@@ -7,6 +7,7 @@
   "feel.home_shift": {"subtitle":"subtitles.canvas.feel.home_shift","sounds":[{"name":"canvas:cues/home_shift","stream":false,"volume":1.0}]},
   "feel.rare_storm_break": {"sounds":[{"name":"canvas:cues/rare_storm_break","stream":false,"volume":1.0}]},
   "feel.rare_golden_hush": {"sounds":[{"name":"canvas:cues/rare_golden_hush","stream":false,"volume":1.0}]},
+  "feel.rare_starlit_stillness": {"sounds":[{"name":"canvas:cues/rare_starlit_stillness","stream":false,"volume":1.0}]},
   "feel.calm_after_storm": {"sounds":[{"name":"canvas:cues/calm_after_storm","stream":false,"volume":1.0}]},
   "music.coming_home": {"sounds":[{"name":"canvas:music/coming_home","stream":true,"volume":1.0}]},
   "music.coming_home_storm": {"sounds":[{"name":"canvas:music/coming_home_storm","stream":true,"volume":1.0}]},

@@ -207,7 +207,7 @@ final class CanvasFeelClient {
     private void presentRareSurprise(RareSurprisePolicy.Moment moment, long worldDay) {
         String event = RareSurprisePolicy.cueEvent(moment);
         if (event.isBlank()) return;
-        playCue(event, 0.34f, moment == RareSurprisePolicy.Moment.STORM_BREAK ? 1.02f : 0.98f);
+        playCue(event, 0.34f, RareSurprisePolicy.cuePitch(moment));
         rareMoment = moment;
         rareSurpriseTicks = 140;
         lastSurpriseDay = worldDay;
@@ -379,9 +379,7 @@ final class CanvasFeelClient {
             int rareWash = RareSurprisePolicy.washArgb(rareMoment);
             graphics.fill(0, 0, width, height, rareWash);
             int inset = Math.max(10, Math.min(width, height) / 18);
-            int shimmer = rareMoment == RareSurprisePolicy.Moment.STORM_BREAK
-                    ? 0x5CAADFFF
-                    : 0x62FFE09A;
+            int shimmer = RareSurprisePolicy.shimmerArgb(rareMoment);
             graphics.fill(inset, inset, width - inset, inset + 2, shimmer);
             graphics.fill(inset, height - inset - 2, width - inset, height - inset, shimmer);
         }
