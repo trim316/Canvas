@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import pathlib
-import sys
 
 root = pathlib.Path(".")
 screens = sorted(root.glob("ci-evidence/client/*.png"))
 if len(screens) < 2:
     raise SystemExit(f"expected at least two client screenshots, found {len(screens)}")
+
+digests = [hashlib.sha256(path.read_bytes()).hexdigest() for path in screens]
+if len(set(digests)) < 2:
+    raise SystemExit("before/after FEEL screenshots are byte-identical")
 
 log = pathlib.Path("run/logs/latest.log")
 if not log.exists():
@@ -20,6 +24,7 @@ required = [
     "sound_physics_remastered",
     "Reloading ResourceManager:",
     "Sound engine started",
+    "CANVAS_CI_VISUAL_ACTIVE",
 ]
 missing = [needle for needle in required if needle not in text]
 if missing:
@@ -35,4 +40,6 @@ present = [needle for needle in forbidden if needle in text]
 if present:
     raise SystemExit("Canvas audio resource failures detected: " + ", ".join(present))
 
-print(f"client evidence verification: PASS ({len(screens)} screenshots)")
+print("client evidence verification: PASS")
+for path, digest in zip(screens, digests):
+    print(f"  {path.name} sha256={digest}")

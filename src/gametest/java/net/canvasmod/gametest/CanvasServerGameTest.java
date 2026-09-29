@@ -2,10 +2,12 @@ package net.canvasmod.gametest;
 
 import java.lang.reflect.Method;
 import net.canvasmod.FamiliarityPolicy;
+import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.level.block.Blocks;
 
@@ -40,6 +42,58 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 new HomeEvidencePolicy.Evidence(true, 1, 1, 1, 2);
         context.assertTrue(home.qualifies(),
                 "Sheltered bed + domestic infrastructure should qualify as HOME evidence");
+        context.succeed();
+    }
+
+    @GameTest
+    public void loadedWorldHomeDetectorRecognizesAuthoredHome(GameTestHelper context) {
+        BlockPos center = new BlockPos(3, 2, 3);
+
+        for (int x = 0; x <= 6; x++) {
+            for (int z = 0; z <= 6; z++) {
+                context.setBlock(x, 1, z, Blocks.OAK_PLANKS);
+                context.setBlock(x, 4, z, Blocks.OAK_PLANKS);
+            }
+        }
+        for (int y = 2; y <= 3; y++) {
+            for (int i = 0; i <= 6; i++) {
+                context.setBlock(0, y, i, Blocks.OAK_PLANKS);
+                context.setBlock(6, y, i, Blocks.OAK_PLANKS);
+                context.setBlock(i, y, 0, Blocks.OAK_PLANKS);
+                context.setBlock(i, y, 6, Blocks.OAK_PLANKS);
+            }
+        }
+
+        context.setBlock(2, 2, 2, Blocks.RED_BED);
+        context.setBlock(4, 2, 2, Blocks.CHEST);
+        context.setBlock(4, 2, 4, Blocks.CRAFTING_TABLE);
+        context.setBlock(2, 2, 4, Blocks.LANTERN);
+
+        HomeEvidencePolicy.Evidence evidence = HomeEvidenceDetector.scan(
+                context.getLevel(), context.absolutePos(center));
+
+        context.assertTrue(evidence.qualifies(),
+                "A loaded, sheltered, player-authored home with bed and infrastructure must qualify");
+        context.assertTrue(evidence.beds() > 0, "Detector must see the bed");
+        context.assertTrue(evidence.storage() > 0, "Detector must see storage");
+        context.assertTrue(evidence.work() > 0, "Detector must see work infrastructure");
+        context.succeed();
+    }
+
+    @GameTest
+    public void loadedWorldHomeDetectorRejectsRoofOnlyShelter(GameTestHelper context) {
+        BlockPos center = new BlockPos(3, 2, 3);
+        for (int x = 0; x <= 6; x++) {
+            for (int z = 0; z <= 6; z++) {
+                context.setBlock(x, 4, z, Blocks.STONE);
+            }
+        }
+
+        HomeEvidencePolicy.Evidence evidence = HomeEvidenceDetector.scan(
+                context.getLevel(), context.absolutePos(center));
+
+        context.assertFalse(evidence.qualifies(),
+                "A roof/cave-like shelter with no domestic anchor must remain UNKNOWN");
         context.succeed();
     }
 
