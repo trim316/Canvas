@@ -15,6 +15,8 @@ public final class CanvasClientGameTest implements FabricClientGameTest {
             context.takeScreenshot("canvas-after-feel");
             context.waitTicks(100);
             context.takeScreenshot("canvas-rare-surprise");
+            context.waitTicks(60);
+            context.takeScreenshot("canvas-weather-character");
         }
     }
 }

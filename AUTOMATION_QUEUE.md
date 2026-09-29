@@ -11,19 +11,14 @@ This file is the durable queue for the hourly Canvas development automation. The
 5. After every substantive tranche, push, let CI start, inspect progress, and fix mechanical failures immediately.
 6. If a tranche is green and time remains in the same invocation, immediately start the next queue item.
 7. Never wait for the user to say “continue” for already-approved roadmap work.
-8. Only stop early for:
-   - a subjective FEEL decision that cannot be automated,
-   - a product tradeoff not already covered by the established vision,
-   - external permissions/account access,
-   - a dependency or Minecraft/Fabric incompatibility requiring a human choice,
-   - imminent automation/tool execution limits.
+8. Only stop early for a subjective FEEL decision, a product tradeoff not already covered by the vision, external permissions, a dependency/Minecraft/Fabric incompatibility requiring a human choice, or imminent execution limits.
 9. Preserve invariants: no Canvas block/world mutation, no custom mobs, no forced chunk loading, no terrain/worldgen ownership, semantic HOME rather than timer-only HOME, familiarity for all vanilla mobs, and mature companion mods for simulation-heavy ambience/acoustics/particles/music where appropriate.
 10. Every new experience must gain automated evidence before it is treated as proven.
 
 ## Queue
 
 ### P0 — Finish Milestone 0 vertical slice
-- [ ] Weather character v2: rain-on-roof context, thunderstorm shelter mood, calm-after-storm transition, no block ownership.
+- [x] Weather character v2: rain-on-roof context, thunderstorm shelter mood, calm-after-storm transition, no block ownership. Implemented in alpha.13; mark proven only after full CI is green.
 - [ ] Coming Home v3: coordinate home ambience, contextual music, familiar mobs, village rhythm, weather, and return-history into one restrained arrival director.
 - [ ] Rare Surprise v2: at least three presentation-only rare moments with deterministic rarity, cooldowns, and “nothing happens” protection.
 - [ ] Nothing Happens guardrails: explicit density ceilings and anti-spam tests so Canvas regularly stays quiet.
