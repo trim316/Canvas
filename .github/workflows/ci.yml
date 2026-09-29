@@ -40,6 +40,9 @@ jobs:
         with:
           gradle-version: "9.5.1"
 
+      - name: Verify Canvas safety and loaded-only invariants
+        run: python3 scripts/verify_invariants.py
+
       - name: Build, unit tests, and real server GameTests
         run: gradle clean build --no-daemon --stacktrace
 
@@ -168,6 +171,9 @@ jobs:
           echo "- Java 25 compilation"
           echo "- Fabric Loom build for Minecraft 26.2"
           echo "- semantic HOME loaded-world GameTests"
+          echo "- Milestone-0 eight-moment scenario campaign"
+          echo "- bounded observation/performance policy"
+          echo "- no-production-mutation / no-forced-chunk-load source gate"
           echo "- all-Mob familiarity policy GameTests"
           echo "- real server GameTests"
           echo "- real client GameTests with quantitative screenshot delta"

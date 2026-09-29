@@ -2,8 +2,11 @@ package net.canvasmod.gametest;
 
 import java.lang.reflect.Method;
 import java.nio.file.Files;
+import java.util.EnumSet;
 import net.canvasmod.CanvasFeelProfile;
 import net.canvasmod.CanvasWorldMemoryStore;
+import net.canvasmod.MilestoneZeroScenarioPolicy;
+import net.canvasmod.ObservationBudgetPolicy;
 import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
@@ -474,6 +477,45 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
 
         Files.deleteIfExists(file);
         Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
+    @GameTest
+    public void milestoneZeroScenarioCampaignCoversEightMoments(GameTestHelper context) {
+        EnumSet<MilestoneZeroScenarioPolicy.Moment> seen =
+                EnumSet.noneOf(MilestoneZeroScenarioPolicy.Moment.class);
+
+        seen.addAll(MilestoneZeroScenarioPolicy.observe(new MilestoneZeroScenarioPolicy.Frame(
+                true, true, true, false, VillageLifePolicy.Rhythm.WAKE,
+                false, RareSurprisePolicy.Moment.NONE, false)));
+        seen.addAll(MilestoneZeroScenarioPolicy.observe(new MilestoneZeroScenarioPolicy.Frame(
+                false, true, true, true, VillageLifePolicy.Rhythm.ACTIVE,
+                false, RareSurprisePolicy.Moment.NONE, false)));
+        seen.addAll(MilestoneZeroScenarioPolicy.observe(new MilestoneZeroScenarioPolicy.Frame(
+                false, true, true, false, VillageLifePolicy.Rhythm.WIND_DOWN,
+                true, RareSurprisePolicy.Moment.NONE, false)));
+        seen.addAll(MilestoneZeroScenarioPolicy.observe(new MilestoneZeroScenarioPolicy.Frame(
+                false, true, false, false, VillageLifePolicy.Rhythm.GATHERING,
+                false, RareSurprisePolicy.Moment.GOLDEN_HUSH, false)));
+        seen.addAll(MilestoneZeroScenarioPolicy.observe(new MilestoneZeroScenarioPolicy.Frame(
+                false, true, true, false, VillageLifePolicy.Rhythm.ACTIVE,
+                false, RareSurprisePolicy.Moment.NONE, true)));
+
+        context.assertTrue(
+                seen.equals(EnumSet.allOf(MilestoneZeroScenarioPolicy.Moment.class)),
+                "Milestone-0 campaign must cover all eight experience moments: " + seen);
+        context.succeed();
+    }
+
+    @GameTest
+    public void observationBudgetStaysBoundedAndLoadedOnly(GameTestHelper context) {
+        context.assertTrue(
+                ObservationBudgetPolicy.HOME_MAX_BLOCK_PROBES == 2312,
+                "HOME scan must remain explicitly bounded");
+        context.assertTrue(
+                ObservationBudgetPolicy.withinBudget(),
+                "HOME observation equivalent probe rate must stay within budget: "
+                        + ObservationBudgetPolicy.equivalentBlockProbesPerSecond());
         context.succeed();
     }
 

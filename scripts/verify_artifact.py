@@ -22,6 +22,8 @@ required_classes = [
     "CanvasMod.class",
     "CanvasFeelProfile.class",
     "CanvasWorldMemoryStore.class",
+    "MilestoneZeroScenarioPolicy.class",
+    "ObservationBudgetPolicy.class",
     "MomentDensityPolicy.class",
     "HomecomingPolicy.class",
     "RareSurprisePolicy.class",
