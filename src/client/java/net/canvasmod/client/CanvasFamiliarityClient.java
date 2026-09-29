@@ -46,7 +46,7 @@ final class CanvasFamiliarityClient {
         long previous = lastCue.getOrDefault(id, Long.MIN_VALUE / 4);
         if (tick - previous < CUE_COOLDOWN) return;
 
-        client.player.displayClientMessage(Component.literal("Canvas · A familiar face"), true);
+        client.player.sendSystemMessage(Component.literal("Canvas · A familiar face"));
         lastCue.put(id, tick);
     }
 }
