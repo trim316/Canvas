@@ -135,12 +135,22 @@ final class CanvasFeelClient {
         playCue("feel.coming_home", 0.32f, 1.0f);
     }
 
+    private boolean isSheltered(BlockPos center) {
+        if (!client.level.canSeeSky(center.above())) return true;
+        for (int dy = 1; dy <= 8; dy++) {
+            BlockPos above = center.above(dy);
+            if (client.level.getChunkSource().getChunkNow(above.getX() >> 4, above.getZ() >> 4) == null) break;
+            if (!client.level.getBlockState(above).isAir()) return true;
+        }
+        return false;
+    }
+
     private HomeEvidencePolicy.Evidence scanClient(BlockPos center) {
         int beds = 0;
         int storage = 0;
         int work = 0;
         int comfort = 0;
-        boolean sheltered = !client.level.canSeeSky(center.above());
+        boolean sheltered = isSheltered(center);
 
         for (int dx = -8; dx <= 8; dx++) {
             for (int dy = -3; dy <= 4; dy++) {
