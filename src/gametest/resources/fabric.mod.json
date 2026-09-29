@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "canvas-gametest",
+  "version": "1.0.0",
+  "name": "Canvas GameTests",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": [
+      "net.canvasmod.gametest.CanvasServerGameTest"
+    ],
+    "fabric-client-gametest": [
+      "net.canvasmod.gametest.CanvasClientGameTest"
+    ]
+  }
+}
