@@ -43,6 +43,7 @@ final class CanvasFeelClient {
     private String ambienceKey = "";
     private boolean atHome;
     private boolean ciVisualAnnounced;
+    private int familiarPulseTicks;
 
     void acceptServerHome(HomeStatePayload payload) {
         hasHome = true;
@@ -51,6 +52,11 @@ final class CanvasFeelClient {
         homeY = payload.pos().getY();
         homeZ = payload.pos().getZ();
         accumulator.reset();
+    }
+
+    void presentFamiliarFace() {
+        familiarPulseTicks = 60;
+        playCue("feel.familiar_face", 0.30f, 1.0f);
     }
 
     void register() {
@@ -99,6 +105,7 @@ final class CanvasFeelClient {
                     homeX + 0.5, homeY + 0.5, homeZ + 0.5) <= HOME_RADIUS_SQ;
 
         observeReturn(dimension);
+        if (familiarPulseTicks > 0) familiarPulseTicks = Math.max(0, familiarPulseTicks - 20);
 
         long dayTime = client.level.getOverworldClockTime() % 24000L;
         boolean evening = dayTime >= 11500L && dayTime < 14000L;
@@ -240,6 +247,21 @@ final class CanvasFeelClient {
             graphics.fill(0, height - band, width, height, edge);
             graphics.fill(0, band, band, height - band, edge);
             graphics.fill(width - band, band, width, height - band, edge);
+        }
+
+        if (familiarPulseTicks > 0) {
+            int cx = width / 2;
+            int cy = height / 2;
+            int radius = 14;
+            int pulse = 0x66FFD28A;
+            graphics.fill(cx - radius, cy - radius, cx - 4, cy - radius + 2, pulse);
+            graphics.fill(cx + 4, cy - radius, cx + radius, cy - radius + 2, pulse);
+            graphics.fill(cx - radius, cy + radius - 2, cx - 4, cy + radius, pulse);
+            graphics.fill(cx + 4, cy + radius - 2, cx + radius, cy + radius, pulse);
+            graphics.fill(cx - radius, cy - radius, cx - radius + 2, cy - 4, pulse);
+            graphics.fill(cx - radius, cy + 4, cx - radius + 2, cy + radius, pulse);
+            graphics.fill(cx + radius - 2, cy - radius, cx + radius, cy - 4, pulse);
+            graphics.fill(cx + radius - 2, cy + 4, cx + radius, cy + radius, pulse);
         }
     }
 
