@@ -45,7 +45,7 @@ text = log.read_text(encoding="utf-8", errors="replace")
 text_lower = text.lower()
 
 required = [
-    "canvas 0.2.0-alpha.15",
+    "canvas 0.2.0-alpha.16",
     "Reloading ResourceManager:",
     "Sound engine started",
 ]
@@ -82,6 +82,8 @@ if "CANVAS_CI_RARE_SURPRISE_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas rare-surprise presentation")
 if "CANVAS_CI_WEATHER_CHARACTER_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas weather-character presentation")
+if "CANVAS_CI_NOTHING_HAPPENS_GUARDRAIL_ACTIVE" not in game_test_text:
+    raise SystemExit("client GameTest never demonstrated the Nothing Happens density guardrail")
 
 forbidden = [
     "File canvas:sounds/cues/coming_home.ogg does not exist",
