@@ -76,7 +76,7 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 context.getLevel(), context.absolutePos(center));
 
         context.assertTrue(evidence.qualifies(),
-                "A loaded, sheltered, player-authored home with bed and infrastructure must qualify");
+                "A loaded, sheltered, player-authored home with bed and infrastructure must qualify: " + evidence.summary());
         context.assertTrue(evidence.beds() > 0, "Detector must see the bed");
         context.assertTrue(evidence.storage() > 0, "Detector must see storage");
         context.assertTrue(evidence.work() > 0, "Detector must see work infrastructure");
