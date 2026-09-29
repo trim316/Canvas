@@ -84,6 +84,7 @@ final class CanvasFamiliarityClient {
 
         client.player.sendSystemMessage(Component.literal("Canvas · A familiar face"));
         feel.presentFamiliarFace();
+        director.noteFamiliarMoment();
         lastCue.put(id, tick);
         save();
     }

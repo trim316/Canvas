@@ -79,6 +79,7 @@ final class CanvasFeelClient {
         homeY = payload.pos().getY();
         homeZ = payload.pos().getZ();
         accumulator.reset();
+        director.bindHome(homeDimension, homeX, homeY, homeZ);
     }
 
     void presentFamiliarFace() {
@@ -206,9 +207,11 @@ final class CanvasFeelClient {
             return;
         }
 
-        long daysSinceLast = lastSurpriseDay <= Long.MIN_VALUE / 8
+        long persistedSurpriseDay = director.lastSurpriseDay();
+        long effectiveLastSurpriseDay = Math.max(lastSurpriseDay, persistedSurpriseDay);
+        long daysSinceLast = effectiveLastSurpriseDay <= Long.MIN_VALUE / 8
                 ? Long.MAX_VALUE / 4
-                : worldDay - lastSurpriseDay;
+                : worldDay - effectiveLastSurpriseDay;
         RareSurprisePolicy.Moment candidate = RareSurprisePolicy.classify(
                 atHome, previousRaining, raining, thundering, dayTime,
                 worldDay, homeX, homeZ, daysSinceLast);
@@ -236,6 +239,7 @@ final class CanvasFeelClient {
         rareMoment = moment;
         rareSurpriseTicks = 140;
         lastSurpriseDay = worldDay;
+        director.noteRareMoment(worldDay);
     }
 
     private void onPhaseChanged(CanvasFeelProfile.Phase previous, CanvasFeelProfile.Phase next) {
@@ -286,6 +290,7 @@ final class CanvasFeelClient {
         homeX = (int)Math.floor(accumulator.x());
         homeY = (int)Math.floor(accumulator.y());
         homeZ = (int)Math.floor(accumulator.z());
+        director.bindHome(homeDimension, homeX, homeY, homeZ);
         client.player.sendSystemMessage(Component.literal("Canvas · Home recognized"));
         HomecomingPolicy.Plan plan = director.previewHomecoming();
         homecomingFlavor = plan.flavor();

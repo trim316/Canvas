@@ -83,6 +83,7 @@ final class CanvasVillageLifeClient {
                 playMusicMoment(event, musicVolume(next), musicPitch(next));
                 presentationTicks = next == VillageLifePolicy.Rhythm.GATHERING ? 120 : 80;
                 lastMusicMoment = tick;
+                director.noteVillageMoment();
             }
         }
 

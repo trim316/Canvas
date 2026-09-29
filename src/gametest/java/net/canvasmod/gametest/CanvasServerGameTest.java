@@ -1,7 +1,9 @@
 package net.canvasmod.gametest;
 
 import java.lang.reflect.Method;
+import java.nio.file.Files;
 import net.canvasmod.CanvasFeelProfile;
+import net.canvasmod.CanvasWorldMemoryStore;
 import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
@@ -441,6 +443,37 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                         0L,
                         MomentDensityPolicy.MAX_MAJOR_MOMENTS_PER_DAY),
                 "Daily density ceiling must create Nothing Happens space");
+        context.succeed();
+    }
+
+    @GameTest
+    public void worldMemoryPersistsHomeVillageFamiliarAndRareHistory(GameTestHelper context) throws Exception {
+        var dir = Files.createTempDirectory("canvas-world-memory-test");
+        var file = dir.resolve("memory.properties");
+
+        CanvasWorldMemoryStore first = new CanvasWorldMemoryStore(file);
+        first.bind("minecraft:overworld|10|64|20");
+        first.noteHomecoming();
+        first.noteHomecoming();
+        first.noteFamiliarMoment();
+        first.noteVillageMoment();
+        first.noteRareMoment(42L);
+
+        CanvasWorldMemoryStore reloaded = new CanvasWorldMemoryStore(file);
+        reloaded.bind("minecraft:overworld|10|64|20");
+        var snapshot = reloaded.snapshot();
+
+        context.assertTrue(snapshot.homecomings() == 2,
+                "Meaningful returns must survive reload");
+        context.assertTrue(snapshot.familiarMoments() == 1,
+                "Familiar-face history must survive reload");
+        context.assertTrue(snapshot.villageMoments() == 1,
+                "Village moment history must survive reload");
+        context.assertTrue(snapshot.rareMoments() == 1 && snapshot.lastSurpriseDay() == 42L,
+                "Rare surprise history and cooldown anchor must survive reload");
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
         context.succeed();
     }
 
