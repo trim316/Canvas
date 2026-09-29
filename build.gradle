@@ -36,6 +36,7 @@ dependencies {
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
     productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    productionRuntimeMods fileTree(dir: "ci-mods", include: ["*.jar"])
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -65,5 +66,6 @@ tasks.withType(Test).configureEach {
 tasks.register("runProductionClientGameTest", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
     jvmArgs.add("-Dfabric.client.gametest")
     jvmArgs.add("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
+    jvmArgs.add("-Dcanvas.home.requiredSamples=1")
     useXVFB = true
 }

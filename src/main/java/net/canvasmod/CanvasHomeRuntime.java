@@ -1,15 +1,16 @@
 package net.canvasmod;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -18,31 +19,32 @@ import net.minecraft.world.level.storage.LevelResource;
 
 final class CanvasHomeRuntime {
     private static final int SAMPLE_INTERVAL = 100;
-    private static final int REQUIRED_GOOD_SAMPLES = 12;
-    private static final int RADIUS = 7;
-    private static final double CANDIDATE_RADIUS_SQ = 14.0 * 14.0;
+    private static final int REQUIRED_GOOD_SAMPLES = HomeRecognitionAccumulator.DEFAULT_REQUIRED_GOOD_SAMPLES;
 
     private final Map<UUID, State> states = new HashMap<>();
     private Path file;
+    private Path evidenceFile;
     private long tick;
 
     void onServerStarting(MinecraftServer server) {
         states.clear();
         tick = 0;
-        file = server.getWorldPath(LevelResource.ROOT).resolve("data").resolve("canvas-home-v1.properties");
+        Path root = server.getWorldPath(LevelResource.ROOT);
+        file = root.resolve("data").resolve("canvas-home-v2.properties");
+        evidenceFile = root.resolve("canvas-runtime-evidence").resolve("home-recognition.log");
         load();
+        evidence("session_start", "-", "home_schema=v2");
     }
 
     void onServerTick(MinecraftServer server) {
         tick++;
         if (tick % SAMPLE_INTERVAL != 0) return;
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            observe(player);
-        }
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) observe(player);
     }
 
     void onServerStopped() {
         save();
+        evidence("session_stop", "-", "players=" + states.size());
         states.clear();
         tick = 0;
     }
@@ -55,75 +57,35 @@ final class CanvasHomeRuntime {
         State state = states.computeIfAbsent(player.getUUID(), ignored -> new State());
         if (state.homeDimension != null) return;
 
-        Evidence evidence = scan(level, center);
-        if (!evidence.qualifies()) {
-            state.resetCandidate();
-            return;
-        }
-
+        HomeEvidencePolicy.Evidence homeEvidence = HomeEvidenceDetector.scan(level, center);
         String dimension = level.dimension().identifier().toString();
-        if (!dimension.equals(state.candidateDimension)
-                || state.goodSamples == 0
-                || distanceSq(player.getX(), player.getY(), player.getZ(),
-                    state.candidateX, state.candidateY, state.candidateZ) > CANDIDATE_RADIUS_SQ) {
-            state.candidateDimension = dimension;
-            state.candidateX = player.getX();
-            state.candidateY = player.getY();
-            state.candidateZ = player.getZ();
-            state.goodSamples = 1;
-            state.bestScore = evidence.score();
-            return;
+        boolean recognized = state.accumulator.observe(
+                dimension,
+                player.getX(),
+                player.getY(),
+                player.getZ(),
+                homeEvidence,
+                REQUIRED_GOOD_SAMPLES);
+
+        if (!homeEvidence.qualifies() || state.accumulator.goodSamples() == 1) {
+            evidence("home_sample", player.getUUID().toString(),
+                    "tick=" + tick + "," + homeEvidence.summary()
+                    + ",goodSamples=" + state.accumulator.goodSamples());
         }
 
-        state.goodSamples++;
-        state.bestScore = Math.max(state.bestScore, evidence.score());
-        if (state.goodSamples < REQUIRED_GOOD_SAMPLES) return;
+        if (!recognized) return;
 
-        state.homeDimension = dimension;
-        state.homeX = (int)Math.floor(state.candidateX);
-        state.homeY = (int)Math.floor(state.candidateY);
-        state.homeZ = (int)Math.floor(state.candidateZ);
-        state.homeScore = state.bestScore;
-        player.sendSystemMessage(Component.literal(
-            "Canvas · Home recognized (" + evidence.summary() + ")"));
+        state.homeDimension = state.accumulator.dimension();
+        state.homeX = (int)Math.floor(state.accumulator.x());
+        state.homeY = (int)Math.floor(state.accumulator.y());
+        state.homeZ = (int)Math.floor(state.accumulator.z());
+        state.homeScore = state.accumulator.bestScore();
+
+        String summary = homeEvidence.summary();
+        evidence("home_recognized", player.getUUID().toString(),
+                "tick=" + tick + "," + summary);
+        player.sendSystemMessage(Component.literal("Canvas · Home recognized"));
         save();
-    }
-
-    private static Evidence scan(ServerLevel level, BlockPos center) {
-        boolean sheltered = !level.canSeeSky(center.above());
-        int beds = 0;
-        int storage = 0;
-        int work = 0;
-        int comfort = 0;
-
-        for (int dx = -RADIUS; dx <= RADIUS; dx++) {
-            for (int dy = -3; dy <= 4; dy++) {
-                for (int dz = -RADIUS; dz <= RADIUS; dz++) {
-                    BlockPos pos = new BlockPos(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
-                    if (level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4) == null) continue;
-                    String id = BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()).toString()
-                        .toLowerCase(Locale.ROOT);
-
-                    if (id.endsWith("_bed")) beds++;
-                    if (containsAny(id, "chest", "barrel", "shulker_box")) storage++;
-                    if (containsAny(id, "crafting_table", "furnace", "smoker", "blast_furnace",
-                            "stonecutter", "anvil", "loom", "cartography_table", "smithing_table",
-                            "grindstone", "brewing_stand", "enchanting_table")) work++;
-                    if (containsAny(id, "bookshelf", "lantern", "campfire", "flower_pot", "carpet")) comfort++;
-                }
-            }
-        }
-        return new Evidence(sheltered, beds, storage, work, comfort);
-    }
-
-    private static boolean containsAny(String value, String... needles) {
-        for (String needle : needles) if (value.contains(needle)) return true;
-        return false;
-    }
-
-    private static double distanceSq(double ax,double ay,double az,double bx,double by,double bz) {
-        double dx=ax-bx, dy=ay-by, dz=az-bz;
-        return dx*dx + dy*dy + dz*dz;
     }
 
     void save() {
@@ -139,10 +101,19 @@ final class CanvasHomeRuntime {
             p.setProperty(k + ".z", Integer.toString(s.homeZ));
             p.setProperty(k + ".score", Integer.toString(s.homeScore));
         }
+
         try {
             Files.createDirectories(file.getParent());
-            try (var out = Files.newOutputStream(file)) {
-                p.store(out, "Canvas semantic home memory");
+            Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
+            try (var out = Files.newOutputStream(tmp)) {
+                p.store(out, "Canvas semantic home memory v2");
+            }
+            try {
+                Files.move(tmp, file,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                Files.move(tmp, file, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
         } catch (IOException ignored) { }
     }
@@ -155,6 +126,7 @@ final class CanvasHomeRuntime {
         } catch (IOException ignored) {
             return;
         }
+
         for (String key : p.stringPropertyNames()) {
             if (!key.endsWith(".dimension")) continue;
             String prefix = key.substring(0, key.length() - ".dimension".length());
@@ -170,42 +142,23 @@ final class CanvasHomeRuntime {
         }
     }
 
-    private record Evidence(boolean sheltered, int beds, int storage, int work, int comfort) {
-        int score() {
-            int s = sheltered ? 2 : 0;
-            if (beds > 0) s += 4;
-            if (storage > 0) s += 2;
-            if (work > 0) s += 2;
-            if (comfort >= 2) s += 1;
-            return s;
-        }
-
-        boolean qualifies() {
-            return sheltered && beds > 0 && (storage > 0 || work > 0) && score() >= 8;
-        }
-
-        String summary() {
-            return "bed=" + beds + ", storage=" + storage + ", work=" + work + ", shelter=" + sheltered;
-        }
+    private void evidence(String type, String player, String detail) {
+        if (evidenceFile == null) return;
+        String line = Instant.now() + " type=" + type + " player=" + player + " " + detail
+                + System.lineSeparator();
+        try {
+            Files.createDirectories(evidenceFile.getParent());
+            Files.writeString(evidenceFile, line, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (IOException ignored) { }
     }
 
     private static final class State {
-        String candidateDimension;
-        double candidateX;
-        double candidateY;
-        double candidateZ;
-        int goodSamples;
-        int bestScore;
+        final HomeRecognitionAccumulator accumulator = new HomeRecognitionAccumulator();
         String homeDimension;
         int homeX;
         int homeY;
         int homeZ;
         int homeScore;
-
-        void resetCandidate() {
-            candidateDimension = null;
-            goodSamples = 0;
-            bestScore = 0;
-        }
     }
 }

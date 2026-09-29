@@ -1,0 +1,23 @@
+{
+  "feel.coming_home": {
+    "subtitle": "subtitles.canvas.feel.coming_home",
+    "sounds": [
+      { "name": "canvas:cues/coming_home", "stream": false, "volume": 1.0 }
+    ]
+  },
+  "presence.hearth_air": {
+    "sounds": [
+      { "name": "canvas:presence/hearth_air_v0", "stream": false, "volume": 1.0 }
+    ]
+  },
+  "presence.harbor_air": {
+    "sounds": [
+      { "name": "canvas:presence/harbor_air_v0", "stream": false, "volume": 1.0 }
+    ]
+  },
+  "presence.void_stillness": {
+    "sounds": [
+      { "name": "canvas:presence/void_stillness_v0", "stream": false, "volume": 1.0 }
+    ]
+  }
+}
