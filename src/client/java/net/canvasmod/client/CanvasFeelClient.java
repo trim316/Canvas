@@ -82,7 +82,9 @@ final class CanvasFeelClient {
         director.bindHome(homeDimension, homeX, homeY, homeZ);
     }
 
-    boolean isAtHome() { return atHome; }\n\n    void presentFamiliarFace() {
+    boolean isAtHome() { return atHome; }
+
+    void presentFamiliarFace() {
         familiarPulseTicks = 60;
         playCue("feel.familiar_face", 0.30f, 1.0f);
     }
