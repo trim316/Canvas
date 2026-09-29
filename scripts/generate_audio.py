@@ -64,6 +64,22 @@ def coming_home_samples(duration: float = 6.0) -> list[float]:
     return result
 
 
+def familiar_face_samples(duration: float = 2.2) -> list[float]:
+    count = int(SR * duration)
+    voices = [(392.0, 0.10), (493.88, 0.08), (587.33, 0.06)]
+    result: list[float] = []
+    for i in range(count):
+        t = i / SR
+        envelope = math.exp(-2.4 * t)
+        shimmer = 1.0 + 0.18 * math.sin(2.0 * math.pi * 3.0 * t)
+        value = sum(
+            amp * math.sin(2.0 * math.pi * freq * t + index * 0.35)
+            for index, (freq, amp) in enumerate(voices)
+        )
+        result.append(math.tanh(value * envelope * shimmer * 1.6) * 0.34)
+    return result
+
+
 def encode(target: pathlib.Path, samples: list[float]) -> None:
     with tempfile.TemporaryDirectory(prefix="canvas-audio-") as temp_dir:
         wav = pathlib.Path(temp_dir) / "source.wav"
@@ -77,6 +93,7 @@ def encode(target: pathlib.Path, samples: list[float]) -> None:
 
 def main() -> None:
     encode(ROOT / "cues/coming_home.ogg", coming_home_samples())
+    encode(ROOT / "cues/familiar_face.ogg", familiar_face_samples())
     encode(ROOT / "presence/hearth_air_v0.ogg",
            loop_samples(24.0, [(110.0, .13), (138.59, .10), (164.81, .08), (220.0, .035)], 0.55))
     encode(ROOT / "presence/harbor_air_v0.ogg",
