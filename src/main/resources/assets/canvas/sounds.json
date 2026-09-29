@@ -1,26 +1,224 @@
 {
-  "feel.coming_home": {"subtitle":"subtitles.canvas.feel.coming_home","sounds":[{"name":"canvas:cues/coming_home","stream":false,"volume":1.0}]},
-  "feel.coming_home_familiar": {"subtitle":"subtitles.canvas.feel.coming_home","sounds":[{"name":"canvas:cues/coming_home_familiar","stream":false,"volume":1.0}]},
-  "feel.coming_home_village": {"subtitle":"subtitles.canvas.feel.coming_home","sounds":[{"name":"canvas:cues/coming_home_village","stream":false,"volume":1.0}]},
-  "feel.coming_home_lived_in": {"subtitle":"subtitles.canvas.feel.coming_home","sounds":[{"name":"canvas:cues/coming_home_lived_in","stream":false,"volume":1.0}]},
-  "feel.familiar_face": {"subtitle":"subtitles.canvas.feel.familiar_face","sounds":[{"name":"canvas:cues/familiar_face","stream":false,"volume":1.0}]},
-  "feel.home_shift": {"subtitle":"subtitles.canvas.feel.home_shift","sounds":[{"name":"canvas:cues/home_shift","stream":false,"volume":1.0}]},
-  "feel.rare_storm_break": {"sounds":[{"name":"canvas:cues/rare_storm_break","stream":false,"volume":1.0}]},
-  "feel.rare_golden_hush": {"sounds":[{"name":"canvas:cues/rare_golden_hush","stream":false,"volume":1.0}]},
-  "feel.rare_starlit_stillness": {"sounds":[{"name":"canvas:cues/rare_starlit_stillness","stream":false,"volume":1.0}]},
-  "feel.calm_after_storm": {"sounds":[{"name":"canvas:cues/calm_after_storm","stream":false,"volume":1.0}]},
-  "music.coming_home": {"sounds":[{"name":"canvas:music/coming_home","stream":true,"volume":1.0}]},
-  "music.coming_home_storm": {"sounds":[{"name":"canvas:music/coming_home_storm","stream":true,"volume":1.0}]},
-  "music.village_wake": {"sounds":[{"name":"canvas:music/village_wake","stream":true,"volume":1.0}]},
-  "music.village_wind_down": {"sounds":[{"name":"canvas:music/village_wind_down","stream":true,"volume":1.0}]},
-  "music.community_gathering": {"sounds":[{"name":"canvas:music/community_gathering","stream":true,"volume":1.0}]},
-  "presence.rain_on_roof": {"sounds":[{"name":"canvas:presence/rain_on_roof","stream":true,"volume":1.0}]},
-  "presence.thunder_shelter": {"sounds":[{"name":"canvas:presence/thunder_shelter","stream":true,"volume":1.0}]},
-  "presence.home_morning": {"sounds":[{"name":"canvas:presence/home_morning","stream":true,"volume":1.0}]},
-  "presence.home_day": {"sounds":[{"name":"canvas:presence/home_day","stream":true,"volume":1.0}]},
-  "presence.home_evening": {"sounds":[{"name":"canvas:presence/home_evening","stream":true,"volume":1.0}]},
-  "presence.home_night": {"sounds":[{"name":"canvas:presence/home_night","stream":true,"volume":1.0}]},
-  "presence.home_storm": {"sounds":[{"name":"canvas:presence/home_storm","stream":true,"volume":1.0}]},
-  "presence.harbor_air": {"sounds":[{"name":"canvas:presence/harbor_air_v0","stream":true,"volume":1.0}]},
-  "presence.void_stillness": {"sounds":[{"name":"canvas:presence/void_stillness_v0","stream":true,"volume":1.0}]}
+  "feel.coming_home": {
+    "subtitle": "subtitles.canvas.feel.coming_home",
+    "sounds": [
+      {
+        "name": "canvas:cues/coming_home",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "feel.coming_home_familiar": {
+    "subtitle": "subtitles.canvas.feel.coming_home",
+    "sounds": [
+      {
+        "name": "canvas:cues/coming_home_familiar",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "feel.coming_home_village": {
+    "subtitle": "subtitles.canvas.feel.coming_home",
+    "sounds": [
+      {
+        "name": "canvas:cues/coming_home_village",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "feel.coming_home_lived_in": {
+    "subtitle": "subtitles.canvas.feel.coming_home",
+    "sounds": [
+      {
+        "name": "canvas:cues/coming_home_lived_in",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "feel.familiar_face": {
+    "subtitle": "subtitles.canvas.feel.familiar_face",
+    "sounds": [
+      {
+        "name": "canvas:cues/familiar_face",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "feel.home_shift": {
+    "subtitle": "subtitles.canvas.feel.home_shift",
+    "sounds": [
+      {
+        "name": "canvas:cues/home_shift",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "feel.rare_storm_break": {
+    "sounds": [
+      {
+        "name": "canvas:cues/rare_storm_break",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "feel.rare_golden_hush": {
+    "sounds": [
+      {
+        "name": "canvas:cues/rare_golden_hush",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "feel.rare_starlit_stillness": {
+    "sounds": [
+      {
+        "name": "canvas:cues/rare_starlit_stillness",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "feel.calm_after_storm": {
+    "sounds": [
+      {
+        "name": "canvas:cues/calm_after_storm",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "music.coming_home": {
+    "sounds": [
+      {
+        "name": "canvas:music/coming_home",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "music.coming_home_storm": {
+    "sounds": [
+      {
+        "name": "canvas:music/coming_home_storm",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "music.village_wake": {
+    "sounds": [
+      {
+        "name": "canvas:music/village_wake",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "music.village_wind_down": {
+    "sounds": [
+      {
+        "name": "canvas:music/village_wind_down",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "music.community_gathering": {
+    "sounds": [
+      {
+        "name": "canvas:music/community_gathering",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.rain_on_roof": {
+    "sounds": [
+      {
+        "name": "canvas:presence/rain_on_roof",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.thunder_shelter": {
+    "sounds": [
+      {
+        "name": "canvas:presence/thunder_shelter",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.home_morning": {
+    "sounds": [
+      {
+        "name": "canvas:presence/home_morning",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.home_day": {
+    "sounds": [
+      {
+        "name": "canvas:presence/home_day",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.home_evening": {
+    "sounds": [
+      {
+        "name": "canvas:presence/home_evening",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.home_night": {
+    "sounds": [
+      {
+        "name": "canvas:presence/home_night",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.home_storm": {
+    "sounds": [
+      {
+        "name": "canvas:presence/home_storm",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.harbor_air": {
+    "sounds": [
+      {
+        "name": "canvas:presence/harbor_air_v0",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.void_stillness": {
+    "sounds": [
+      {
+        "name": "canvas:presence/void_stillness_v0",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  }
 }

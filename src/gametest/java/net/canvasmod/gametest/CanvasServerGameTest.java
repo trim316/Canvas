@@ -9,6 +9,7 @@ import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomecomingPolicy;
 import net.canvasmod.MomentDensityPolicy;
+import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
@@ -401,6 +402,45 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                         tick + MomentDensityPolicy.GLOBAL_MIN_GAP_TICKS * 2L,
                         true),
                 "Music must stay below its stricter density ceiling");
+        context.succeed();
+    }
+
+    @GameTest
+    public void rareSurpriseV2IncludesThreeSparsePresentationMoments(GameTestHelper context) {
+        boolean foundStorm = false;
+        boolean foundGolden = false;
+        boolean foundStar = false;
+        for (long day = 0; day < 64; day++) {
+            long since = 99L;
+            if (RareSurprisePolicy.classify(true, true, false, false, 12000L, day, 3, 9, since)
+                    == RareSurprisePolicy.Moment.STORM_BREAK) foundStorm = true;
+            if (RareSurprisePolicy.classify(true, false, false, false, 12000L, day, 3, 9, since)
+                    == RareSurprisePolicy.Moment.GOLDEN_HUSH) foundGolden = true;
+            if (RareSurprisePolicy.classify(true, false, false, false, 18000L, day, 3, 9, since)
+                    == RareSurprisePolicy.Moment.STARLIT_STILLNESS) foundStar = true;
+        }
+        context.assertTrue(foundStorm && foundGolden && foundStar,
+                "All three rare surprise families must be reachable over a long deterministic horizon");
+        context.succeed();
+    }
+
+    @GameTest
+    public void nothingHappensDensityGuardrailsEnforceQuietSpace(GameTestHelper context) {
+        context.assertTrue(
+                MomentDensityPolicy.allowMajor(10000L, 0L, 0),
+                "A major moment should be allowed after a sufficiently long quiet gap");
+        context.assertFalse(
+                MomentDensityPolicy.allowMajor(
+                        100L,
+                        80L,
+                        0),
+                "Back-to-back major moments must be suppressed");
+        context.assertFalse(
+                MomentDensityPolicy.allowMajor(
+                        10000L,
+                        0L,
+                        MomentDensityPolicy.MAX_MAJOR_MOMENTS_PER_DAY),
+                "Daily density ceiling must create Nothing Happens space");
         context.succeed();
     }
 

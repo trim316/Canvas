@@ -94,6 +94,7 @@ forbidden = [
     "File canvas:sounds/cues/rare_storm_break.ogg does not exist",
     "File canvas:sounds/cues/rare_golden_hush.ogg does not exist",
     "File canvas:sounds/cues/rare_starlit_stillness.ogg does not exist",
+    "File canvas:sounds/cues/rare_starlit_stillness.ogg does not exist",
     "File canvas:sounds/cues/calm_after_storm.ogg does not exist",
     "File canvas:sounds/presence/rain_on_roof.ogg does not exist",
     "File canvas:sounds/presence/thunder_shelter.ogg does not exist",

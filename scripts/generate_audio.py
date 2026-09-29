@@ -103,6 +103,8 @@ def main() -> None:
     encode(ROOT / "cues/rare_golden_hush.ogg",
            one_shot(5.8, [(174.61,.085),(220.0,.075),(277.18,.058),(349.23,.038),(523.25,.018)], .13))
     encode(ROOT / "cues/rare_starlit_stillness.ogg",
+           one_shot(6.2, [(110.0,.075),(146.83,.060),(196.0,.045),(293.66,.020)], .11))
+    encode(ROOT / "cues/rare_starlit_stillness.ogg",
            one_shot(6.2, [(110.0,.070),(146.83,.055),(196.0,.040),(293.66,.020)], .11))
     encode(ROOT / "cues/calm_after_storm.ogg",
            one_shot(4.6, [(196.0,.07),(246.94,.06),(311.13,.046),(392.0,.024)], .18))

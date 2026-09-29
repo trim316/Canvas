@@ -7,6 +7,7 @@ import net.canvasmod.HomeRecognitionAccumulator;
 import net.canvasmod.HomeStatePayload;
 import net.canvasmod.HomecomingPolicy;
 import net.canvasmod.MomentDensityPolicy;
+import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -48,6 +49,9 @@ final class CanvasFeelClient {
     private long lastReturnCue = Long.MIN_VALUE / 4;
     private long lastPhaseCue = Long.MIN_VALUE / 4;
     private long lastSurpriseDay = Long.MIN_VALUE / 4;
+    private long lastMajorMomentTick = Long.MIN_VALUE / 4;
+    private long majorMomentDay = Long.MIN_VALUE / 4;
+    private int majorMomentsToday;
     private CanvasLoopingSound ambience;
     private String ambienceKey = "";
     private boolean atHome;
@@ -144,6 +148,10 @@ final class CanvasFeelClient {
         long clock = client.level.getOverworldClockTime();
         long dayTime = clock % 24000L;
         long worldDay = Math.floorDiv(clock, 24000L);
+        if (worldDay != majorMomentDay) {
+            majorMomentDay = worldDay;
+            majorMomentsToday = 0;
+        }
 
         CanvasFeelProfile.Phase nextPhase =
                 CanvasFeelProfile.classify(atHome, sheltered, raining, thundering, dayTime);
@@ -192,6 +200,7 @@ final class CanvasFeelClient {
     private void observeRareSurprise(boolean raining, boolean thundering, long dayTime, long worldDay) {
         if (CI_VISUAL_TEST && tick >= 180 && !ciRareAnnounced) {
             presentRareSurprise(RareSurprisePolicy.Moment.GOLDEN_HUSH, worldDay);
+            recordMajorMoment();
             System.out.println("CANVAS_CI_RARE_SURPRISE_ACTIVE");
             ciRareAnnounced = true;
             return;
@@ -207,6 +216,17 @@ final class CanvasFeelClient {
                 && director.allowMoment(MomentDensityPolicy.Kind.RARE_SURPRISE, tick, false)) {
             presentRareSurprise(candidate, worldDay);
         }
+    }
+
+    private boolean allowMajorMoment() {
+        return MomentDensityPolicy.allowMajor(tick, lastMajorMomentTick, majorMomentsToday);
+    }
+
+    private void recordMajorMoment() {
+        lastMajorMomentTick = tick;
+        majorMomentsToday = Math.min(
+                MomentDensityPolicy.MAX_MAJOR_MOMENTS_PER_DAY,
+                majorMomentsToday + 1);
     }
 
     private void presentRareSurprise(RareSurprisePolicy.Moment moment, long worldDay) {
@@ -333,6 +353,10 @@ final class CanvasFeelClient {
         if (atHome && awaySince >= 0) {
             if (tick - awaySince >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
                 HomecomingPolicy.Plan plan = director.nextHomecoming();
+                if (!allowMajorMoment()) {
+                    awaySince = -1;
+                    return;
+                }
                 homecomingFlavor = plan.flavor();
                 boolean music = !plan.musicEvent().isBlank();
                 if (director.allowMoment(MomentDensityPolicy.Kind.HOMECOMING, tick, music)) {
@@ -340,6 +364,7 @@ final class CanvasFeelClient {
                     if (music) playMusicMoment(plan.musicEvent(), 0.20f, plan.cuePitch());
                     homeTransitionPulseTicks = plan.pulseTicks();
                     lastReturnCue = tick;
+                recordMajorMoment();
                 }
             }
             awaySince = -1;
