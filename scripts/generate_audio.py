@@ -105,6 +105,11 @@ def main() -> None:
     encode(ROOT / "cues/calm_after_storm.ogg",
            one_shot(4.6, [(196.0,.07),(246.94,.06),(311.13,.046),(392.0,.024)], .18))
 
+    encode(ROOT / "music/coming_home.ogg",
+           music_moment(14.0, [(130.81,.075),(164.81,.066),(196.0,.052),(261.63,.028)], .11, .45))
+    encode(ROOT / "music/coming_home_storm.ogg",
+           music_moment(14.0, [(98.0,.080),(123.47,.065),(146.83,.048),(196.0,.025)], .09, .85))
+
     encode(ROOT / "music/village_wake.ogg",
            music_moment(12.0, [(196.0,.10),(246.94,.08),(293.66,.065),(392.0,.035)], .18, .35))
     encode(ROOT / "music/village_wind_down.ogg",

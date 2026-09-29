@@ -167,6 +167,7 @@ final class CanvasFeelClient {
             playCue("feel.calm_after_storm", 0.26f, 1.03f);
         }
         weatherCharacter = nextWeather;
+        director.setWeatherCharacter(weatherCharacter);
 
         String weatherAmbience = WeatherCharacterPolicy.ambienceEvent(weatherCharacter);
         if (!weatherAmbience.isBlank()) {
@@ -260,9 +261,11 @@ final class CanvasFeelClient {
         homeY = (int)Math.floor(accumulator.y());
         homeZ = (int)Math.floor(accumulator.z());
         client.player.sendSystemMessage(Component.literal("Canvas · Home recognized"));
-        homecomingFlavor = director.homecomingFlavor();
-        playCue(HomecomingPolicy.cueEvent(homecomingFlavor), 0.36f, 1.0f);
-        homeTransitionPulseTicks = HomecomingPolicy.pulseTicks(homecomingFlavor);
+        HomecomingPolicy.Plan plan = director.previewHomecoming();
+        homecomingFlavor = plan.flavor();
+        playCue(plan.cueEvent(), Math.min(0.40f, plan.cueVolume()), plan.cuePitch());
+        if (!plan.musicEvent().isBlank()) playMusicMoment(plan.musicEvent(), 0.16f, plan.cuePitch());
+        homeTransitionPulseTicks = plan.pulseTicks();
     }
 
     private boolean isSheltered(BlockPos center) {
@@ -320,12 +323,13 @@ final class CanvasFeelClient {
 
         if (atHome && awaySince >= 0) {
             if (tick - awaySince >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
-                homecomingFlavor = director.homecomingFlavor();
-                playCue(
-                        HomecomingPolicy.cueEvent(homecomingFlavor),
-                        HomecomingPolicy.volume(homecomingFlavor),
-                        1.0f);
-                homeTransitionPulseTicks = HomecomingPolicy.pulseTicks(homecomingFlavor);
+                HomecomingPolicy.Plan plan = director.nextHomecoming();
+                homecomingFlavor = plan.flavor();
+                playCue(plan.cueEvent(), plan.cueVolume(), plan.cuePitch());
+                if (!plan.musicEvent().isBlank()) {
+                    playMusicMoment(plan.musicEvent(), 0.20f, plan.cuePitch());
+                }
+                homeTransitionPulseTicks = plan.pulseTicks();
                 lastReturnCue = tick;
             }
             awaySince = -1;
@@ -418,6 +422,10 @@ final class CanvasFeelClient {
         client.getSoundManager().play(new CanvasOneShotSound(eventPath, volume, pitch));
     }
 
+    private void playMusicMoment(String eventPath, float volume, float pitch) {
+        client.getSoundManager().play(new CanvasMusicMoment(eventPath, volume, pitch));
+    }
+
     private static double distanceSq(double ax,double ay,double az,double bx,double by,double bz) {
         double dx=ax-bx, dy=ay-by, dz=az-bz;
         return dx*dx + dy*dy + dz*dz;
@@ -441,6 +449,27 @@ final class CanvasFeelClient {
         public void tick() {
             age++;
             if (age >= 180) stop();
+        }
+    }
+
+    private static final class CanvasMusicMoment extends AbstractTickableSoundInstance {
+        private int age;
+
+        CanvasMusicMoment(String eventPath, float volume, float pitch) {
+            super(SoundEvent.createVariableRangeEvent(
+                    Identifier.fromNamespaceAndPath("canvas", eventPath)),
+                    SoundSource.MUSIC,
+                    RandomSource.create());
+            this.volume = volume;
+            this.pitch = pitch;
+            this.relative = true;
+            this.attenuation = SoundInstance.Attenuation.NONE;
+        }
+
+        @Override
+        public void tick() {
+            age++;
+            if (age >= 20 * 16) stop();
         }
     }
 

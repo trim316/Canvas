@@ -292,6 +292,40 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.succeed();
     }
 
+    @GameTest
+    public void comingHomeV3CoordinatesWeatherMusicAndReturnHistory(GameTestHelper context) {
+        HomecomingPolicy.Plan first = HomecomingPolicy.compose(
+                true,
+                VillageLifePolicy.Rhythm.GATHERING,
+                WeatherCharacterPolicy.Character.CLEAR,
+                0);
+        context.assertTrue(first.flavor() == HomecomingPolicy.Flavor.LIVED_IN,
+                "Familiar faces and village life should still drive the arrival flavor");
+        context.assertTrue(first.musicEvent().isBlank(),
+                "The first rich return should remain restrained rather than always forcing music");
+
+        HomecomingPolicy.Plan remembered = HomecomingPolicy.compose(
+                true,
+                VillageLifePolicy.Rhythm.GATHERING,
+                WeatherCharacterPolicy.Character.CLEAR,
+                3);
+        context.assertTrue(remembered.musicEvent().equals("music.coming_home"),
+                "Repeated meaningful returns may earn a restrained contextual music moment");
+        context.assertTrue(remembered.pulseTicks() > first.pulseTicks(),
+                "Return history should subtly deepen a familiar homecoming");
+
+        HomecomingPolicy.Plan storm = HomecomingPolicy.compose(
+                false,
+                VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.THUNDER_SHELTERED,
+                1);
+        context.assertTrue(storm.musicEvent().equals("music.coming_home_storm"),
+                "Returning into a sheltered thunderstorm should coordinate weather and music");
+        context.assertTrue(storm.cuePitch() < 1.0f,
+                "Storm homecoming should have a lower, calmer cue profile");
+        context.succeed();
+    }
+
     @Override
     public void invokeTestMethod(GameTestHelper context, Method method) throws ReflectiveOperationException {
         method.invoke(this, context);

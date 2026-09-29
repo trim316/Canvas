@@ -18,8 +18,8 @@ This file is the durable queue for the hourly Canvas development automation. The
 ## Queue
 
 ### P0 — Finish Milestone 0 vertical slice
-- [x] Weather character v2: rain-on-roof context, thunderstorm shelter mood, calm-after-storm transition, no block ownership. Implemented in alpha.13; mark proven only after full CI is green.
-- [ ] Coming Home v3: coordinate home ambience, contextual music, familiar mobs, village rhythm, weather, and return-history into one restrained arrival director.
+- [x] Weather character v2: rain-on-roof context, thunderstorm shelter mood, calm-after-storm transition, no block ownership. Proven by alpha.13 automated server/client/runtime evidence.
+- [x] Coming Home v3: coordinate home ambience, contextual music, familiar mobs, village rhythm, weather, and return-history into one restrained arrival director. Implemented in alpha.14; mark proven only after full CI is green.
 - [ ] Rare Surprise v2: at least three presentation-only rare moments with deterministic rarity, cooldowns, and “nothing happens” protection.
 - [ ] Nothing Happens guardrails: explicit density ceilings and anti-spam tests so Canvas regularly stays quiet.
 - [ ] World-memory persistence: persist meaningful HOME returns, familiar-mob continuity, village moments, and rare-surprise history across reloads.
