@@ -20,6 +20,7 @@ assert "0.157.0+26.2" in meta["depends"]["fabric-api"]
 
 required_classes = [
     "CanvasMod.class",
+    "HomeStatePayload.class",
     "CanvasClient.class",
     "CanvasHomeRuntime.class",
     "HomeEvidencePolicy.class",
