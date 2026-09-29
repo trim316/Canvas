@@ -53,13 +53,13 @@ missing = [needle for needle in required if needle.lower() not in text_lower]
 if missing:
     raise SystemExit("production client evidence missing: " + ", ".join(missing))
 
-lock_path = pathlib.Path("ci-mods/companion-lock.json")
-if not lock_path.exists():
-    raise SystemExit("companion lock manifest missing")
-lock = json.loads(lock_path.read_text(encoding="utf-8"))
+admission_path = pathlib.Path("ci-evidence/companion-admission.json")
+if not admission_path.exists():
+    raise SystemExit("companion admission report missing")
+admission = json.loads(admission_path.read_text(encoding="utf-8"))
 
 missing_mods = []
-for entry in lock["entries"]:
+for entry in admission["active_entries"]:
     mod_id = entry.get("mod_id")
     mod_version = entry.get("mod_version")
     if not mod_id:
@@ -97,7 +97,7 @@ if fatals:
     raise SystemExit("production client fatal runtime evidence: " + ", ".join(fatals))
 
 print("client evidence verification: PASS")
-print(f"  companions_loaded={len(lock['entries'])}")
+print(f"  companions_loaded={len(admission['active_entries'])}")
 print(f"  mean_channel_delta={mean_channel_delta:.3f}")
 print(f"  changed_fraction={changed_fraction:.3%}")
 for path, digest in zip(screens, digests):

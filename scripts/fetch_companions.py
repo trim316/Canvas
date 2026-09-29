@@ -154,6 +154,10 @@ while queue:
             raise SystemExit(f"{pmeta['slug']}: required dependency without project id")
         if dependency_project in resolved_projects:
             continue
+        dependency_project_meta = project_meta(dependency_project)
+        if dependency_project_meta.get("slug") == "fabric-api":
+            print(f"fabric-api: provided externally by Canvas baseline; dependency requested by {pmeta['slug']}")
+            continue
         queue.append((dependency_project, dependency_version, f"required-by:{pmeta['slug']}"))
 
 root_project_ids = {project_meta(project)["id"] for project in ROOT_PROJECTS}

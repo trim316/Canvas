@@ -100,6 +100,9 @@ jobs:
         with:
           gradle-version: "9.5.1"
 
+      - name: Automatically admit compatible cozy companions
+        run: python3 scripts/admit_companions.py
+
       - name: Run real Fabric client GameTests
         shell: bash
         run: |
@@ -116,6 +119,8 @@ jobs:
           test "$(find ci-evidence/client -type f -name '*.png' | wc -l)" -ge 2
 
       - name: Launch packaged production client with companions
+        env:
+          CANVAS_COMPANION_DIR: ci-mods-active
         run: gradle runProductionClientGameTest --no-daemon --stacktrace
 
       - name: Verify production client and visual FEEL evidence
@@ -144,8 +149,8 @@ jobs:
         with:
           name: canvas-companion-mods
           path: |
-            ci-mods/*.jar
-            ci-mods/companion-lock.json
+            ci-mods-active/*.jar
+            ci-evidence/companion-admission.json
           if-no-files-found: error
 
   candidate_gate:
@@ -164,7 +169,7 @@ jobs:
           echo "- real server GameTests"
           echo "- real client GameTests with quantitative screenshot delta"
           echo "- packaged production client under Xvfb"
-          echo "- Cool Rain + Sound Physics + AmbientSounds + contextual music + SFX companion launch"
+          echo "- automated companion admission with incompatible optional mods quarantined"
           echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"
 

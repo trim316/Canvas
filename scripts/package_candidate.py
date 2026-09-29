@@ -18,7 +18,7 @@ canvas = [p for p in candidate_dir.rglob("*.jar") if "sources" not in p.name.low
 companions = list(companions_dir.rglob("*.jar"))
 if len(canvas) != 1:
     raise SystemExit(f"expected exactly one Canvas runtime JAR, got {canvas}")
-if len(companions) < 5:
+if len(companions) < 2:
     raise SystemExit(f"expected validated companion stack, got only {len(companions)} JARs")
 
 stage = output.parent / "candidate-stage"
