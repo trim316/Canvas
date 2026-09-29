@@ -45,7 +45,7 @@ text = log.read_text(encoding="utf-8", errors="replace")
 text_lower = text.lower()
 
 required = [
-    "canvas 0.2.0-alpha.13",
+    "canvas 0.2.0-alpha.14",
     "Reloading ResourceManager:",
     "Sound engine started",
 ]
@@ -95,6 +95,8 @@ forbidden = [
     "File canvas:sounds/presence/thunder_shelter.ogg does not exist",
     "File canvas:sounds/cues/familiar_face.ogg does not exist",
     "File canvas:sounds/cues/home_shift.ogg does not exist",
+    "File canvas:sounds/music/coming_home.ogg does not exist",
+    "File canvas:sounds/music/coming_home_storm.ogg does not exist",
     "File canvas:sounds/music/village_wake.ogg does not exist",
     "File canvas:sounds/music/village_wind_down.ogg does not exist",
     "File canvas:sounds/music/community_gathering.ogg does not exist",

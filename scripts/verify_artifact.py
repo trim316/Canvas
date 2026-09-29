@@ -55,6 +55,8 @@ required_resources = [
     "assets/canvas/sounds/presence/thunder_shelter.ogg",
     "assets/canvas/sounds/cues/familiar_face.ogg",
     "assets/canvas/sounds/cues/home_shift.ogg",
+    "assets/canvas/sounds/music/coming_home.ogg",
+    "assets/canvas/sounds/music/coming_home_storm.ogg",
     "assets/canvas/sounds/music/village_wake.ogg",
     "assets/canvas/sounds/music/village_wind_down.ogg",
     "assets/canvas/sounds/music/community_gathering.ogg",
