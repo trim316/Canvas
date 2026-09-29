@@ -19,10 +19,23 @@ loom {
     }
 }
 
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = "canvas-gametest"
+        enableGameTests = true
+        enableClientGameTests = true
+        eula = true
+        clearRunDirectory = true
+        username = "CanvasCI"
+    }
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     implementation "net.fabricmc:fabric-loader:${project.loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -47,4 +60,10 @@ processResources {
 
 tasks.withType(Test).configureEach {
     failOnNoDiscoveredTests.set(false)
+}
+
+tasks.register("runProductionClientGameTest", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+    jvmArgs.add("-Dfabric.client.gametest")
+    jvmArgs.add("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
+    useXVFB = true
 }
