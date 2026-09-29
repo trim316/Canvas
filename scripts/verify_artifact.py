@@ -37,6 +37,7 @@ required_resources = [
     "assets/canvas/sounds.json",
     "assets/canvas/lang/en_us.json",
     "assets/canvas/sounds/cues/coming_home.ogg",
+    "assets/canvas/sounds/cues/familiar_face.ogg",
     "assets/canvas/sounds/presence/hearth_air_v0.ogg",
     "assets/canvas/sounds/presence/harbor_air_v0.ogg",
     "assets/canvas/sounds/presence/void_stillness_v0.ogg",
