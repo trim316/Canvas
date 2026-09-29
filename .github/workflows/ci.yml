@@ -84,10 +84,10 @@ jobs:
           distribution: temurin
           java-version: "25"
 
-      - name: Install virtual display, audio runtime, and encoder
+      - name: Install virtual display, audio runtime, encoder, and image verifier
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libgl1-mesa-dri libgl1 libopenal1 ffmpeg
+          sudo apt-get install -y xvfb libgl1-mesa-dri libgl1 libopenal1 ffmpeg python3-pil
 
       - name: Generate Canvas-owned ambience
         run: python3 scripts/generate_audio.py
@@ -118,7 +118,7 @@ jobs:
       - name: Launch packaged production client with companions
         run: gradle runProductionClientGameTest --no-daemon --stacktrace
 
-      - name: Verify production client evidence
+      - name: Verify production client and visual FEEL evidence
         run: python3 scripts/verify_client_runtime.py
 
       - name: Collect client logs
@@ -138,6 +138,14 @@ jobs:
           path: ci-evidence/client/**
           if-no-files-found: error
 
+      - name: Upload exact validated companion JARs
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canvas-companion-mods
+          path: ci-mods/*.jar
+          if-no-files-found: error
+
   candidate_gate:
     name: Proven candidate gate
     runs-on: ubuntu-24.04
@@ -149,11 +157,41 @@ jobs:
           echo "Canvas candidate passed:"
           echo "- Java 25 compilation"
           echo "- Fabric Loom build for Minecraft 26.2"
-          echo "- semantic HOME policy GameTests"
+          echo "- semantic HOME loaded-world GameTests"
           echo "- all-Mob familiarity policy GameTests"
           echo "- real server GameTests"
-          echo "- real client GameTests with screenshots"
+          echo "- real client GameTests with quantitative screenshot delta"
           echo "- packaged production client under Xvfb"
           echo "- Cool Rain + Sound Physics Remastered compatibility launch"
           echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"
+
+  package_candidate:
+    name: Package proven playtest bundle
+    runs-on: ubuntu-24.04
+    needs: [candidate_gate]
+    if: success()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download proven Canvas JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: canvas-26.2-candidate
+          path: candidate
+
+      - name: Download exact validated companion mods
+        uses: actions/download-artifact@v4
+        with:
+          name: canvas-companion-mods
+          path: companions
+
+      - name: Build checksum-bound playtest bundle
+        run: python3 scripts/package_candidate.py candidate companions dist/Canvas-26.2-PROVEN.zip
+
+      - name: Upload proven playtest bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: canvas-26.2-proven-bundle
+          path: dist/Canvas-26.2-PROVEN.zip
+          if-no-files-found: error
