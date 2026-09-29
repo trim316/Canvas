@@ -12,7 +12,7 @@ public final class CanvasClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(HomeStatePayload.TYPE, (payload, context) ->
                 context.client().execute(() -> feel.acceptServerHome(payload)));
 
-        new CanvasFamiliarityClient().register();
+        new CanvasFamiliarityClient(feel).register();
         feel.register();
     }
 }
