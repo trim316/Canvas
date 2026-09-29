@@ -101,7 +101,12 @@ jobs:
           gradle-version: "9.5.1"
 
       - name: Run real Fabric client GameTests
-        run: gradle runClientGameTest --no-daemon --stacktrace
+        shell: bash
+        run: |
+          mkdir -p ci-evidence/client
+          set -o pipefail
+          gradle runClientGameTest --no-daemon --stacktrace 2>&1 | tee ci-evidence/client/client-gametest-console.log
+          grep -q "CANVAS_CI_VISUAL_ACTIVE" ci-evidence/client/client-gametest-console.log
 
       - name: Preserve client GameTest screenshots
         shell: bash
