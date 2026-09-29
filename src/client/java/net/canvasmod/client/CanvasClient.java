@@ -13,6 +13,7 @@ public final class CanvasClient implements ClientModInitializer {
                 context.client().execute(() -> feel.acceptServerHome(payload)));
 
         new CanvasFamiliarityClient(feel).register();
+        new CanvasVillageLifeClient().register();
         feel.register();
     }
 }

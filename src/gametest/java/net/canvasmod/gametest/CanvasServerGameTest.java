@@ -2,6 +2,8 @@ package net.canvasmod.gametest;
 
 import java.lang.reflect.Method;
 import net.canvasmod.CanvasFeelProfile;
+import net.canvasmod.ContextualMusicPolicy;
+import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomeEvidencePolicy;
@@ -176,6 +178,46 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 CanvasFeelProfile.classify(false, true, true, true, 17000L)
                         == CanvasFeelProfile.Phase.AWAY,
                 "HOME FEEL phases must never leak outside HOME");
+        context.succeed();
+    }
+
+    @GameTest
+    public void villageLifeRhythmTracksNaturalSettlementActivity(GameTestHelper context) {
+        context.assertTrue(
+                VillageLifePolicy.classify(3, 2, 500L, false) == VillageLifePolicy.Rhythm.WAKE,
+                "Nearby villagers around dawn should produce Village Wakes Up");
+        context.assertTrue(
+                VillageLifePolicy.classify(3, 2, 12000L, false) == VillageLifePolicy.Rhythm.WIND_DOWN,
+                "Nearby villagers around dusk should produce Village Winds Down");
+        context.assertTrue(
+                VillageLifePolicy.classify(5, 4, 7000L, false) == VillageLifePolicy.Rhythm.GATHERING,
+                "A naturally clustered daytime group should be eligible for community gathering");
+        context.assertTrue(
+                VillageLifePolicy.classify(1, 1, 500L, false) == VillageLifePolicy.Rhythm.NONE,
+                "A lone villager must not manufacture settlement rhythm");
+        context.succeed();
+    }
+
+    @GameTest
+    public void contextualMusicOnlyPresentsMeaningfulVillageTransitions(GameTestHelper context) {
+        context.assertTrue(
+                ContextualMusicPolicy.eventFor(VillageLifePolicy.Rhythm.WAKE).equals("music.village_wake"),
+                "Wake rhythm must map to wake music");
+        context.assertTrue(
+                ContextualMusicPolicy.eventFor(VillageLifePolicy.Rhythm.GATHERING).equals("music.community_gathering"),
+                "Gathering must map to the community music moment");
+        context.assertFalse(
+                ContextualMusicPolicy.shouldPresent(
+                        VillageLifePolicy.Rhythm.ACTIVE,
+                        VillageLifePolicy.Rhythm.ACTIVE,
+                        ContextualMusicPolicy.GENERAL_COOLDOWN_TICKS),
+                "Stable ordinary village activity must remain musically quiet");
+        context.assertTrue(
+                ContextualMusicPolicy.shouldPresent(
+                        VillageLifePolicy.Rhythm.ACTIVE,
+                        VillageLifePolicy.Rhythm.WIND_DOWN,
+                        ContextualMusicPolicy.GENERAL_COOLDOWN_TICKS),
+                "A meaningful rhythm transition should be musically eligible");
         context.succeed();
     }
 

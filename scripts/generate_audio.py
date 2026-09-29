@@ -57,6 +57,23 @@ def one_shot(duration: float, voices: list[tuple[float, float]], decay: float) -
     return result
 
 
+def music_moment(duration: float, voices: list[tuple[float, float]], pulse_hz: float, phase: float) -> list[float]:
+    count = int(SR * duration)
+    result: list[float] = []
+    for i in range(count):
+        t = i / SR
+        fade_in = min(1.0, t / 1.3)
+        fade_out = min(1.0, max(0.0, (duration - t) / 2.0))
+        envelope = fade_in * fade_out
+        pulse = 0.78 + 0.22 * math.sin(2.0 * math.pi * pulse_hz * t + phase)
+        value = 0.0
+        for index, (freq, amp) in enumerate(voices):
+            value += amp * math.sin(2.0 * math.pi * freq * t + index * phase)
+            value += amp * 0.16 * math.sin(2.0 * math.pi * freq * 2.0 * t + 0.4)
+        result.append(math.tanh(value * envelope * pulse * 1.35) * 0.34)
+    return result
+
+
 def encode(target: pathlib.Path, samples: list[float]) -> None:
     with tempfile.TemporaryDirectory(prefix="canvas-audio-") as temp_dir:
         wav = pathlib.Path(temp_dir) / "source.wav"
@@ -75,6 +92,13 @@ def main() -> None:
            one_shot(2.2, [(392.0,.10),(493.88,.08),(587.33,.06)], .55))
     encode(ROOT / "cues/home_shift.ogg",
            one_shot(3.6, [(220.0,.10),(277.18,.08),(329.63,.07),(440.0,.04)], .24))
+
+    encode(ROOT / "music/village_wake.ogg",
+           music_moment(12.0, [(196.0,.10),(246.94,.08),(293.66,.065),(392.0,.035)], .18, .35))
+    encode(ROOT / "music/village_wind_down.ogg",
+           music_moment(13.0, [(130.81,.11),(164.81,.085),(196.0,.060),(261.63,.032)], .12, .70))
+    encode(ROOT / "music/community_gathering.ogg",
+           music_moment(15.0, [(174.61,.09),(220.0,.08),(261.63,.068),(349.23,.040),(440.0,.025)], .24, .50))
 
     encode(ROOT / "presence/home_morning.ogg",
            loop_samples(28.0, [(164.81,.09),(220.0,.07),(277.18,.055),(329.63,.035)], .35, .014))
