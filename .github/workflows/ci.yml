@@ -92,7 +92,7 @@ jobs:
       - name: Generate Canvas-owned ambience
         run: python3 scripts/generate_audio.py
 
-      - name: Resolve pinned companion mods
+      - name: Resolve complete companion stack
         run: python3 scripts/fetch_companions.py
 
       - name: Set up Gradle 9.5.1
@@ -138,12 +138,14 @@ jobs:
           path: ci-evidence/client/**
           if-no-files-found: error
 
-      - name: Upload exact validated companion JARs
+      - name: Upload exact validated companion stack
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: canvas-companion-mods
-          path: ci-mods/*.jar
+          path: |
+            ci-mods/*.jar
+            ci-mods/companion-lock.json
           if-no-files-found: error
 
   candidate_gate:
@@ -162,7 +164,7 @@ jobs:
           echo "- real server GameTests"
           echo "- real client GameTests with quantitative screenshot delta"
           echo "- packaged production client under Xvfb"
-          echo "- Cool Rain + Sound Physics Remastered compatibility launch"
+          echo "- Cool Rain + Sound Physics + AmbientSounds + contextual music + SFX companion launch"
           echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"
 

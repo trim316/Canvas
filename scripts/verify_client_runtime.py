@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import pathlib
 from PIL import Image
 
@@ -32,7 +33,6 @@ for pa, pb in zip(a, b):
 pixels = max(1, len(a))
 mean_channel_delta = total_abs / (pixels * 3)
 changed_fraction = changed / pixels
-
 if mean_channel_delta < 5.0:
     raise SystemExit(f"visual FEEL delta too weak: mean_channel_delta={mean_channel_delta:.3f}")
 if changed_fraction < 0.25:
@@ -41,18 +41,34 @@ if changed_fraction < 0.25:
 log = pathlib.Path("run/logs/latest.log")
 if not log.exists():
     raise SystemExit("production client latest.log was not produced")
-
 text = log.read_text(encoding="utf-8", errors="replace")
+text_lower = text.lower()
+
 required = [
-    "canvas 0.2.0-alpha.4",
-    "coolrain",
-    "sound_physics_remastered",
+    "canvas 0.2.0-alpha.5",
     "Reloading ResourceManager:",
     "Sound engine started",
 ]
-missing = [needle for needle in required if needle not in text]
+missing = [needle for needle in required if needle.lower() not in text_lower]
 if missing:
     raise SystemExit("production client evidence missing: " + ", ".join(missing))
+
+lock_path = pathlib.Path("ci-mods/companion-lock.json")
+if not lock_path.exists():
+    raise SystemExit("companion lock manifest missing")
+lock = json.loads(lock_path.read_text(encoding="utf-8"))
+
+missing_mods = []
+for entry in lock["entries"]:
+    mod_id = entry.get("mod_id")
+    mod_version = entry.get("mod_version")
+    if not mod_id:
+        continue
+    needle = f"- {mod_id} {mod_version}".lower()
+    if needle not in text_lower:
+        missing_mods.append(f"{entry['slug']} => {mod_id} {mod_version}")
+if missing_mods:
+    raise SystemExit("resolved companion mods not loaded:\n  " + "\n  ".join(missing_mods))
 
 game_test_console = pathlib.Path("ci-evidence/client/client-gametest-console.log")
 if not game_test_console.exists():
@@ -71,7 +87,17 @@ present = [needle for needle in forbidden if needle in text]
 if present:
     raise SystemExit("Canvas audio resource failures detected: " + ", ".join(present))
 
+fatal_needles = [
+    "mod resolution encountered an incompatible mod set",
+    "could not execute entrypoint stage",
+    "exception in server tick loop",
+]
+fatals = [needle for needle in fatal_needles if needle in text_lower]
+if fatals:
+    raise SystemExit("production client fatal runtime evidence: " + ", ".join(fatals))
+
 print("client evidence verification: PASS")
+print(f"  companions_loaded={len(lock['entries'])}")
 print(f"  mean_channel_delta={mean_channel_delta:.3f}")
 print(f"  changed_fraction={changed_fraction:.3%}")
 for path, digest in zip(screens, digests):

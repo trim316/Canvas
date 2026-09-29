@@ -18,8 +18,8 @@ canvas = [p for p in candidate_dir.rglob("*.jar") if "sources" not in p.name.low
 companions = list(companions_dir.rglob("*.jar"))
 if len(canvas) != 1:
     raise SystemExit(f"expected exactly one Canvas runtime JAR, got {canvas}")
-if len(companions) < 2:
-    raise SystemExit(f"expected at least two validated companion JARs, got {companions}")
+if len(companions) < 5:
+    raise SystemExit(f"expected validated companion stack, got only {len(companions)} JARs")
 
 stage = output.parent / "candidate-stage"
 if stage.exists():
@@ -42,17 +42,16 @@ for path in sorted(files):
 (stage / "PROVEN.txt").write_text(
     "Canvas Minecraft 26.2 automated candidate\n"
     "This bundle is emitted only after server GameTests, client GameTests,\n"
-    "production-client launch, companion-mod launch, visual-delta verification,\n"
-    "audio-resource verification, and artifact inspection pass.\n",
+    "production-client launch, recursive companion-mod resolution, visual-delta\n"
+    "verification, audio-resource verification, and artifact inspection pass.\n",
     encoding="utf-8",
 )
 
-names = [p.name for p in sorted(files)]
-copy_lines = "\n".join(f'copy /Y "%~dp0mods\\{name}" "%MODS%\\{name}" >nul' for name in names)
-install = f"""@echo off
+installer = r'''@echo off
 setlocal EnableExtensions
-set "MODS=%APPDATA%\\ModrinthApp\\profiles\\Fabulously Optimized\\mods"
-set "BACKUP=%MODS%\\.canvas-backup\\proven-candidate"
+set "MODS=%APPDATA%\ModrinthApp\profiles\Fabulously Optimized\mods"
+set "BACKUP=%MODS%\.canvas-backup\proven-candidate"
+set "PS1=%TEMP%\canvas-proven-install-%RANDOM%.ps1"
 
 if not exist "%MODS%" (
   echo Fabulously Optimized mods folder not found:
@@ -62,22 +61,47 @@ if not exist "%MODS%" (
 
 if not exist "%BACKUP%" mkdir "%BACKUP%"
 
-for %%F in ("%MODS%\\canvas-*.jar") do if exist "%%~fF" move /Y "%%~fF" "%BACKUP%\\" >nul
-for %%F in ("%MODS%\\coolrain-*.jar") do if exist "%%~fF" move /Y "%%~fF" "%BACKUP%\\" >nul
-for %%F in ("%MODS%\\sound-physics-remastered-*.jar") do if exist "%%~fF" move /Y "%%~fF" "%BACKUP%\\" >nul
-for %%F in ("%MODS%\\sound_physics_remastered-*.jar") do if exist "%%~fF" move /Y "%%~fF" "%BACKUP%\\" >nul
+> "%PS1%" echo $ErrorActionPreference = 'Stop'
+>>"%PS1%" echo Add-Type -AssemblyName System.IO.Compression.FileSystem
+>>"%PS1%" echo $mods = [IO.Path]::GetFullPath('%MODS%')
+>>"%PS1%" echo $backup = [IO.Path]::GetFullPath('%BACKUP%')
+>>"%PS1%" echo $incoming = [IO.Path]::GetFullPath('%~dp0mods')
+>>"%PS1%" echo function Get-ModId([string]$jar) {
+>>"%PS1%" echo   try {
+>>"%PS1%" echo     $zip = [IO.Compression.ZipFile]::OpenRead($jar)
+>>"%PS1%" echo     try {
+>>"%PS1%" echo       $entry = $zip.GetEntry('fabric.mod.json')
+>>"%PS1%" echo       if ($null -eq $entry) { return $null }
+>>"%PS1%" echo       $reader = New-Object IO.StreamReader($entry.Open())
+>>"%PS1%" echo       try { return (($reader.ReadToEnd() ^| ConvertFrom-Json).id) } finally { $reader.Dispose() }
+>>"%PS1%" echo     } finally { $zip.Dispose() }
+>>"%PS1%" echo   } catch { return $null }
+>>"%PS1%" echo }
+>>"%PS1%" echo $new = Get-ChildItem $incoming -Filter '*.jar'
+>>"%PS1%" echo $ids = @{}
+>>"%PS1%" echo foreach ($jar in $new) { $id = Get-ModId $jar.FullName; if ($id) { $ids[$id] = $true } }
+>>"%PS1%" echo foreach ($old in Get-ChildItem $mods -Filter '*.jar') {
+>>"%PS1%" echo   $id = Get-ModId $old.FullName
+>>"%PS1%" echo   if ($id -and $ids.ContainsKey($id)) {
+>>"%PS1%" echo     Move-Item -Force $old.FullName (Join-Path $backup $old.Name)
+>>"%PS1%" echo   }
+>>"%PS1%" echo }
+>>"%PS1%" echo foreach ($jar in $new) { Copy-Item -Force $jar.FullName (Join-Path $mods $jar.Name) }
 
-{copy_lines}
+powershell -NoProfile -ExecutionPolicy Bypass -File "%PS1%"
+set "RC=%ERRORLEVEL%"
+del /Q "%PS1%" >nul 2>nul
+if not "%RC%"=="0" exit /b %RC%
 
 echo Canvas proven candidate installed.
 exit /b 0
-"""
-(stage / "INSTALL-CANVAS.cmd").write_text(install, encoding="utf-8", newline="\r\n")
+'''
+(stage / "INSTALL-CANVAS.cmd").write_text(installer, encoding="utf-8", newline="\r\n")
 
 output.parent.mkdir(parents=True, exist_ok=True)
-with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
     for path in sorted(stage.rglob("*")):
         if path.is_file():
-            z.write(path, path.relative_to(stage))
+            archive.write(path, path.relative_to(stage))
 
 print(f"candidate bundle: PASS {output} ({output.stat().st_size} bytes)")
