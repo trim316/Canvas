@@ -15,6 +15,7 @@ public final class CanvasClient implements ClientModInitializer {
 
         new CanvasFamiliarityClient(feel, director).register();
         new CanvasVillageLifeClient(director).register();
+        new CanvasSeasonClient(feel, director).register();
         feel.register();
     }
 }

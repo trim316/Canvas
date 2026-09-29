@@ -27,9 +27,9 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Performance gate: prove observation/orchestration stays within budget and never causes forced chunk loads. Implemented in alpha.17 with bounded probe-rate policy plus production-source mutation/chunk-load invariant verification; mark proven only after full CI is green.
 
 ### P1 — Seasons of Home
-- [ ] Season-provider abstraction so Canvas observes an installed season mod rather than owning season simulation.
-- [ ] Spring/summer/autumn/winter atmosphere profiles.
-- [ ] Seasonal HOME ambience and music orchestration.
+- [x] Season-provider abstraction so Canvas observes an installed season mod rather than owning season simulation. Implemented in alpha.18 with fail-closed Serene Seasons reflection; mark proven only after full CI is green.
+- [x] Spring/summer/autumn/winter atmosphere profiles. Implemented in alpha.18 with restrained audio/visual profiles; mark proven only after full CI is green.
+- [x] Seasonal HOME ambience and music orchestration. Implemented in alpha.18 as a layered HOME signature plus density-governed season transition music; mark proven only after full CI is green.
 - [ ] Seasonal village rhythm interpretation.
 - [ ] Seasonal familiar-mob presentation.
 - [ ] First-snow moment and other rare seasonal moments.

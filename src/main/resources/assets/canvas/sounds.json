@@ -220,5 +220,50 @@
         "volume": 1
       }
     ]
+  },
+  "music.season_home_shift": {
+    "sounds": [
+      {
+        "name": "canvas:music/season_home_shift",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.season_spring": {
+    "sounds": [
+      {
+        "name": "canvas:presence/season_spring",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.season_summer": {
+    "sounds": [
+      {
+        "name": "canvas:presence/season_summer",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.season_autumn": {
+    "sounds": [
+      {
+        "name": "canvas:presence/season_autumn",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
+  "presence.season_winter": {
+    "sounds": [
+      {
+        "name": "canvas:presence/season_winter",
+        "stream": true,
+        "volume": 1
+      }
+    ]
   }
 }

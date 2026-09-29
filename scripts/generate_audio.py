@@ -126,6 +126,17 @@ def main() -> None:
     encode(ROOT / "presence/thunder_shelter.ogg",
            loop_samples(26.0, [(73.42,.10),(92.50,.067),(110.0,.045)], 1.18, .030))
 
+    encode(ROOT / "music/season_home_shift.ogg",
+           music_moment(13.0, [(146.83,.08),(196.0,.07),(246.94,.055),(293.66,.035)], .14, .62))
+    encode(ROOT / "presence/season_spring.ogg",
+           loop_samples(30.0, [(196.0,.035),(246.94,.030),(293.66,.022)], .22, .010))
+    encode(ROOT / "presence/season_summer.ogg",
+           loop_samples(30.0, [(164.81,.032),(220.0,.026),(329.63,.018)], .48, .012))
+    encode(ROOT / "presence/season_autumn.ogg",
+           loop_samples(30.0, [(130.81,.040),(174.61,.030),(220.0,.020)], .82, .014))
+    encode(ROOT / "presence/season_winter.ogg",
+           loop_samples(30.0, [(98.0,.036),(130.81,.024),(196.0,.014)], 1.08, .009))
+
     encode(ROOT / "presence/home_morning.ogg",
            loop_samples(28.0, [(164.81,.09),(220.0,.07),(277.18,.055),(329.63,.035)], .35, .014))
     encode(ROOT / "presence/home_day.ogg",

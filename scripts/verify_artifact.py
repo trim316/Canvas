@@ -20,7 +20,7 @@ assert "0.157.0+26.2" in meta["depends"]["fabric-api"]
 
 required_classes = [
     "CanvasMod.class",
-    "CanvasFeelProfile.class",
+    "CanvasFeelProfile.class",\n    "SeasonPolicy.class",\n    "SeasonalHomeProfile.class",
     "CanvasWorldMemoryStore.class",
     "MilestoneZeroScenarioPolicy.class",
     "ObservationBudgetPolicy.class",
@@ -41,7 +41,7 @@ required_classes = [
     "CanvasFamiliarityClient.class",
     "CanvasFeelClient.class",
     "CanvasExperienceDirector.class",
-    "CanvasVillageLifeClient.class",
+    "CanvasVillageLifeClient.class",\n    "CanvasSeasonClient.class",\n    "CanvasSeasonObserver.class",
 ]
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required
@@ -67,6 +67,11 @@ required_resources = [
     "assets/canvas/sounds/music/village_wake.ogg",
     "assets/canvas/sounds/music/village_wind_down.ogg",
     "assets/canvas/sounds/music/community_gathering.ogg",
+    "assets/canvas/sounds/music/season_home_shift.ogg",
+    "assets/canvas/sounds/presence/season_spring.ogg",
+    "assets/canvas/sounds/presence/season_summer.ogg",
+    "assets/canvas/sounds/presence/season_autumn.ogg",
+    "assets/canvas/sounds/presence/season_winter.ogg",
     "assets/canvas/sounds/presence/home_morning.ogg",
     "assets/canvas/sounds/presence/home_day.ogg",
     "assets/canvas/sounds/presence/home_evening.ogg",
