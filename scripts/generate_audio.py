@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministically generate small Canvas-owned OGG ambience assets.
-
-Official CI runs this before Gradle so the distributable JAR always contains the
-same assets. It intentionally uses only Python stdlib plus ffmpeg.
-"""
+"""Deterministically generate Canvas-owned OGG ambience and transition assets."""
 from __future__ import annotations
 
 import math
@@ -34,7 +30,7 @@ def write_wave(path: pathlib.Path, samples: list[float]) -> None:
         out.writeframes(frames)
 
 
-def loop_samples(duration: float, voices: list[tuple[float, float]], phase: float) -> list[float]:
+def loop_samples(duration: float, voices: list[tuple[float, float]], phase: float, air: float) -> list[float]:
     count = int(SR * duration)
     result: list[float] = []
     for i in range(count):
@@ -43,40 +39,21 @@ def loop_samples(duration: float, voices: list[tuple[float, float]], phase: floa
         for index, (freq, amp) in enumerate(voices):
             f = quantized(freq, duration)
             value += amp * math.sin(2.0 * math.pi * f * t + phase * index)
-            value += amp * 0.20 * math.sin(2.0 * math.pi * f * 2.0 * t + 0.7 + phase * index)
-        # Very slow periodic air movement; because the period is exactly the clip
-        # duration it remains seamless at the loop boundary.
-        value += 0.018 * math.sin(2.0 * math.pi * t / duration + phase)
-        result.append(math.tanh(value * 1.3) * 0.34)
+            value += amp * 0.18 * math.sin(2.0 * math.pi * f * 2.0 * t + 0.7 + phase * index)
+        value += air * math.sin(2.0 * math.pi * t / duration + phase)
+        result.append(math.tanh(value * 1.25) * 0.34)
     return result
 
 
-def coming_home_samples(duration: float = 6.0) -> list[float]:
+def one_shot(duration: float, voices: list[tuple[float, float]], decay: float) -> list[float]:
     count = int(SR * duration)
-    voices = [(130.81, 0.17), (164.81, 0.14), (196.00, 0.12), (261.63, 0.07), (329.63, 0.045)]
     result: list[float] = []
     for i in range(count):
         t = i / SR
-        envelope = math.sin(math.pi * min(1.0, t / duration)) ** 1.4
+        envelope = math.sin(math.pi * min(1.0, t / duration)) ** 1.25
+        envelope *= math.exp(-decay * t)
         value = sum(amp * math.sin(2.0 * math.pi * freq * t) for freq, amp in voices)
-        value += 0.06 * math.exp(-t / 2.2) * math.sin(2.0 * math.pi * 523.25 * t)
-        result.append(math.tanh(value * envelope * 1.5) * 0.38)
-    return result
-
-
-def familiar_face_samples(duration: float = 2.2) -> list[float]:
-    count = int(SR * duration)
-    voices = [(392.0, 0.10), (493.88, 0.08), (587.33, 0.06)]
-    result: list[float] = []
-    for i in range(count):
-        t = i / SR
-        envelope = math.exp(-2.4 * t)
-        shimmer = 1.0 + 0.18 * math.sin(2.0 * math.pi * 3.0 * t)
-        value = sum(
-            amp * math.sin(2.0 * math.pi * freq * t + index * 0.35)
-            for index, (freq, amp) in enumerate(voices)
-        )
-        result.append(math.tanh(value * envelope * shimmer * 1.6) * 0.34)
+        result.append(math.tanh(value * envelope * 1.6) * 0.38)
     return result
 
 
@@ -92,14 +69,28 @@ def encode(target: pathlib.Path, samples: list[float]) -> None:
 
 
 def main() -> None:
-    encode(ROOT / "cues/coming_home.ogg", coming_home_samples())
-    encode(ROOT / "cues/familiar_face.ogg", familiar_face_samples())
-    encode(ROOT / "presence/hearth_air_v0.ogg",
-           loop_samples(24.0, [(110.0, .13), (138.59, .10), (164.81, .08), (220.0, .035)], 0.55))
+    encode(ROOT / "cues/coming_home.ogg",
+           one_shot(6.0, [(130.81,.17),(164.81,.14),(196.0,.12),(261.63,.07),(329.63,.045)], .10))
+    encode(ROOT / "cues/familiar_face.ogg",
+           one_shot(2.2, [(392.0,.10),(493.88,.08),(587.33,.06)], .55))
+    encode(ROOT / "cues/home_shift.ogg",
+           one_shot(3.6, [(220.0,.10),(277.18,.08),(329.63,.07),(440.0,.04)], .24))
+
+    encode(ROOT / "presence/home_morning.ogg",
+           loop_samples(28.0, [(164.81,.09),(220.0,.07),(277.18,.055),(329.63,.035)], .35, .014))
+    encode(ROOT / "presence/home_day.ogg",
+           loop_samples(28.0, [(130.81,.08),(164.81,.065),(196.0,.05),(261.63,.028)], .55, .012))
+    encode(ROOT / "presence/home_evening.ogg",
+           loop_samples(28.0, [(110.0,.10),(146.83,.08),(174.61,.06),(220.0,.035)], .78, .017))
+    encode(ROOT / "presence/home_night.ogg",
+           loop_samples(28.0, [(82.41,.105),(110.0,.07),(130.81,.045),(164.81,.024)], 1.0, .020))
+    encode(ROOT / "presence/home_storm.ogg",
+           loop_samples(28.0, [(73.42,.11),(98.0,.07),(123.47,.045),(146.83,.025)], 1.20, .026))
     encode(ROOT / "presence/harbor_air_v0.ogg",
-           loop_samples(24.0, [(146.83, .07), (196.0, .055), (246.94, .045), (392.0, .016)], 0.85))
+           loop_samples(24.0, [(146.83,.07),(196.0,.055),(246.94,.045),(392.0,.016)], .85, .018))
     encode(ROOT / "presence/void_stillness_v0.ogg",
-           loop_samples(24.0, [(73.42, .08), (98.0, .04), (146.83, .025)], 1.25))
+           loop_samples(24.0, [(73.42,.08),(98.0,.04),(146.83,.025)], 1.25, .018))
+
     for path in sorted(ROOT.rglob("*.ogg")):
         print(f"generated {path} {path.stat().st_size} bytes")
 

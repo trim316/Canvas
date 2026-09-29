@@ -1,6 +1,7 @@
 package net.canvasmod.gametest;
 
 import java.lang.reflect.Method;
+import net.canvasmod.CanvasFeelProfile;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomeEvidencePolicy;
@@ -150,6 +151,31 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                     false,
                     FamiliarityPolicy.CUE_COOLDOWN_TICKS),
                 "A familiar mob must be directly targeted before presenting a cue");
+        context.succeed();
+    }
+
+    @GameTest
+    public void homeFeelChangesAcrossDayAndWeather(GameTestHelper context) {
+        context.assertTrue(
+                CanvasFeelProfile.classify(true, true, false, false, 500L)
+                        == CanvasFeelProfile.Phase.HOME_MORNING,
+                "HOME should have a morning phase");
+        context.assertTrue(
+                CanvasFeelProfile.classify(true, true, false, false, 12500L)
+                        == CanvasFeelProfile.Phase.HOME_EVENING,
+                "HOME should have an evening phase");
+        context.assertTrue(
+                CanvasFeelProfile.classify(true, true, false, false, 17000L)
+                        == CanvasFeelProfile.Phase.HOME_NIGHT,
+                "HOME should have a night phase");
+        context.assertTrue(
+                CanvasFeelProfile.classify(true, true, true, false, 6000L)
+                        == CanvasFeelProfile.Phase.HOME_STORM,
+                "Sheltered rain at HOME should select the storm phase");
+        context.assertTrue(
+                CanvasFeelProfile.classify(false, true, true, true, 17000L)
+                        == CanvasFeelProfile.Phase.AWAY,
+                "HOME FEEL phases must never leak outside HOME");
         context.succeed();
     }
 

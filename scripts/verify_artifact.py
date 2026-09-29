@@ -20,6 +20,7 @@ assert "0.157.0+26.2" in meta["depends"]["fabric-api"]
 
 required_classes = [
     "CanvasMod.class",
+    "CanvasFeelProfile.class",
     "HomeStatePayload.class",
     "CanvasClient.class",
     "CanvasHomeRuntime.class",
@@ -38,6 +39,12 @@ required_resources = [
     "assets/canvas/lang/en_us.json",
     "assets/canvas/sounds/cues/coming_home.ogg",
     "assets/canvas/sounds/cues/familiar_face.ogg",
+    "assets/canvas/sounds/cues/home_shift.ogg",
+    "assets/canvas/sounds/presence/home_morning.ogg",
+    "assets/canvas/sounds/presence/home_day.ogg",
+    "assets/canvas/sounds/presence/home_evening.ogg",
+    "assets/canvas/sounds/presence/home_night.ogg",
+    "assets/canvas/sounds/presence/home_storm.ogg",
     "assets/canvas/sounds/presence/hearth_air_v0.ogg",
     "assets/canvas/sounds/presence/harbor_air_v0.ogg",
     "assets/canvas/sounds/presence/void_stillness_v0.ogg",

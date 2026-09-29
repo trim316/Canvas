@@ -45,7 +45,7 @@ text = log.read_text(encoding="utf-8", errors="replace")
 text_lower = text.lower()
 
 required = [
-    "canvas 0.2.0-alpha.9",
+    "canvas 0.2.0-alpha.10",
     "Reloading ResourceManager:",
     "Sound engine started",
 ]
@@ -80,6 +80,12 @@ if "CANVAS_CI_VISUAL_ACTIVE" not in game_test_text:
 forbidden = [
     "File canvas:sounds/cues/coming_home.ogg does not exist",
     "File canvas:sounds/cues/familiar_face.ogg does not exist",
+    "File canvas:sounds/cues/home_shift.ogg does not exist",
+    "File canvas:sounds/presence/home_morning.ogg does not exist",
+    "File canvas:sounds/presence/home_day.ogg does not exist",
+    "File canvas:sounds/presence/home_evening.ogg does not exist",
+    "File canvas:sounds/presence/home_night.ogg does not exist",
+    "File canvas:sounds/presence/home_storm.ogg does not exist",
     "File canvas:sounds/presence/hearth_air_v0.ogg does not exist",
     "File canvas:sounds/presence/harbor_air_v0.ogg does not exist",
     "File canvas:sounds/presence/void_stillness_v0.ogg does not exist",

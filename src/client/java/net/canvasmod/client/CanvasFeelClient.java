@@ -1,6 +1,7 @@
 package net.canvasmod.client;
 
 import java.util.Locale;
+import net.canvasmod.CanvasFeelProfile;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
 import net.canvasmod.HomeStatePayload;
@@ -25,6 +26,7 @@ final class CanvasFeelClient {
     private static final double AWAY_RADIUS_SQ = 54.0 * 54.0;
     private static final int MIN_AWAY_TICKS = 600;
     private static final int RETURN_COOLDOWN = 2400;
+    private static final int PHASE_CUE_COOLDOWN = 500;
     private static final boolean CI_VISUAL_TEST =
             Boolean.parseBoolean(System.getenv().getOrDefault("CANVAS_VISUAL_TEST", "false"));
 
@@ -39,11 +41,14 @@ final class CanvasFeelClient {
     private int homeZ;
     private long awaySince = -1;
     private long lastReturnCue = Long.MIN_VALUE / 4;
+    private long lastPhaseCue = Long.MIN_VALUE / 4;
     private CanvasLoopingSound ambience;
     private String ambienceKey = "";
     private boolean atHome;
     private boolean ciVisualAnnounced;
     private int familiarPulseTicks;
+    private int homeTransitionPulseTicks;
+    private CanvasFeelProfile.Phase phase = CanvasFeelProfile.Phase.AWAY;
 
     void acceptServerHome(HomeStatePayload payload) {
         hasHome = true;
@@ -74,6 +79,7 @@ final class CanvasFeelClient {
     private void update() {
         if (client.level == null || client.player == null) {
             atHome = false;
+            phase = CanvasFeelProfile.Phase.AWAY;
             stopAmbience(30);
             return;
         }
@@ -106,21 +112,50 @@ final class CanvasFeelClient {
 
         observeReturn(dimension);
         if (familiarPulseTicks > 0) familiarPulseTicks = Math.max(0, familiarPulseTicks - 20);
+        if (homeTransitionPulseTicks > 0) homeTransitionPulseTicks = Math.max(0, homeTransitionPulseTicks - 20);
 
+        boolean sheltered = isSheltered(pos);
+        boolean raining = client.level.isRaining();
+        boolean thundering = client.level.isThundering();
         long dayTime = client.level.getOverworldClockTime() % 24000L;
-        boolean evening = dayTime >= 11500L && dayTime < 14000L;
-        boolean night = dayTime >= 13000L && dayTime < 22500L;
-        boolean morning = dayTime >= 22500L || dayTime < 1700L;
-        boolean sheltered = !client.level.canSeeSky(pos.above());
 
-        if (atHome && sheltered) {
-            setAmbience("presence.hearth_air", night ? 0.22f : 0.18f, night ? 0.97f : 1.0f);
-        } else if (atHome) {
-            setAmbience("presence.hearth_air", 0.10f, 1.01f);
-        } else if (night && sheltered) {
-            setAmbience("presence.void_stillness", 0.05f, 0.985f);
+        CanvasFeelProfile.Phase nextPhase =
+                CanvasFeelProfile.classify(atHome, sheltered, raining, thundering, dayTime);
+        if (nextPhase != phase) {
+            onPhaseChanged(phase, nextPhase);
+            phase = nextPhase;
+        }
+
+        if (phase != CanvasFeelProfile.Phase.AWAY) {
+            setAmbience(
+                    CanvasFeelProfile.ambienceEvent(phase),
+                    CanvasFeelProfile.volume(phase, sheltered),
+                    CanvasFeelProfile.pitch(phase));
+        } else {
+            setAwayAmbience(dayTime, sheltered);
+        }
+    }
+
+    private void onPhaseChanged(CanvasFeelProfile.Phase previous, CanvasFeelProfile.Phase next) {
+        if (next == CanvasFeelProfile.Phase.AWAY) return;
+        homeTransitionPulseTicks = 80;
+
+        if (previous != CanvasFeelProfile.Phase.AWAY
+                && tick - lastPhaseCue >= PHASE_CUE_COOLDOWN) {
+            playCue("feel.home_shift", 0.24f, CanvasFeelProfile.transitionPitch(next));
+            lastPhaseCue = tick;
+        }
+    }
+
+    private void setAwayAmbience(long dayTime, boolean sheltered) {
+        boolean evening = dayTime >= 11500L && dayTime < 14000L;
+        boolean night = dayTime >= 13500L && dayTime < 22500L;
+        boolean morning = dayTime >= 22500L || dayTime < 1700L;
+
+        if (night && sheltered) {
+            setAmbience("presence.void_stillness", 0.045f, 0.985f);
         } else if (morning || evening) {
-            setAmbience("presence.harbor_air", 0.035f, morning ? 1.015f : 0.985f);
+            setAmbience("presence.harbor_air", 0.028f, morning ? 1.015f : 0.985f);
         } else {
             stopAmbience(35);
             ambienceKey = "";
@@ -149,7 +184,8 @@ final class CanvasFeelClient {
         homeY = (int)Math.floor(accumulator.y());
         homeZ = (int)Math.floor(accumulator.z());
         client.player.sendSystemMessage(Component.literal("Canvas · Home recognized"));
-        playCue("feel.coming_home", 0.32f, 1.0f);
+        playCue("feel.coming_home", 0.34f, 1.0f);
+        homeTransitionPulseTicks = 100;
     }
 
     private boolean isSheltered(BlockPos center) {
@@ -207,7 +243,8 @@ final class CanvasFeelClient {
 
         if (atHome && awaySince >= 0) {
             if (tick - awaySince >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
-                playCue("feel.coming_home", 0.45f, 1.0f);
+                playCue("feel.coming_home", 0.48f, 1.0f);
+                homeTransitionPulseTicks = 120;
                 lastReturnCue = tick;
             }
             awaySince = -1;
@@ -219,34 +256,24 @@ final class CanvasFeelClient {
 
         int width = client.getWindow().getGuiScaledWidth();
         int height = client.getWindow().getGuiScaledHeight();
-        long dayTime = client.level.getOverworldClockTime() % 24000L;
 
-        int wash = 0;
-        int edge = 0;
-        if (atHome) {
-            if (dayTime >= 13000L && dayTime < 22500L) {
-                wash = 0x12F3A85A;
-                edge = 0x22FFB35C;
-            } else if (dayTime >= 11500L && dayTime < 14000L) {
-                wash = 0x10FFC77A;
-                edge = 0x1EFFB15D;
-            } else {
-                wash = 0x0CFFE0A5;
-                edge = 0x18FFC77A;
-            }
-        } else if (dayTime >= 11500L && dayTime < 14000L) {
-            wash = 0x060E2740;
-        } else if (dayTime >= 13000L && dayTime < 22500L) {
-            wash = 0x07040B18;
-        }
+        int wash = CanvasFeelProfile.washArgb(phase);
+        int edge = CanvasFeelProfile.edgeArgb(phase);
 
         if (wash != 0) graphics.fill(0, 0, width, height, wash);
         if (edge != 0) {
-            int band = Math.max(6, Math.min(width, height) / 28);
+            int band = Math.max(5, Math.min(width, height) / 32);
             graphics.fill(0, 0, width, band, edge);
             graphics.fill(0, height - band, width, height, edge);
             graphics.fill(0, band, band, height - band, edge);
             graphics.fill(width - band, band, width, height - band, edge);
+        }
+
+        if (homeTransitionPulseTicks > 0 && atHome) {
+            int band = Math.max(3, Math.min(width, height) / 70);
+            int pulse = 0x36FFD18A;
+            graphics.fill(0, 0, width, band, pulse);
+            graphics.fill(0, height - band, width, height, pulse);
         }
 
         if (familiarPulseTicks > 0) {
@@ -307,7 +334,7 @@ final class CanvasFeelClient {
         @Override
         public void tick() {
             age++;
-            if (age >= 120) stop();
+            if (age >= 160) stop();
         }
     }
 
