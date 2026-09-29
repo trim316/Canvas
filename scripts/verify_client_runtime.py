@@ -24,11 +24,17 @@ required = [
     "sound_physics_remastered",
     "Reloading ResourceManager:",
     "Sound engine started",
-    "CANVAS_CI_VISUAL_ACTIVE",
 ]
 missing = [needle for needle in required if needle not in text]
 if missing:
     raise SystemExit("production client evidence missing: " + ", ".join(missing))
+
+game_test_console = pathlib.Path("ci-evidence/client/client-gametest-console.log")
+if not game_test_console.exists():
+    raise SystemExit("client GameTest console evidence was not preserved")
+game_test_text = game_test_console.read_text(encoding="utf-8", errors="replace")
+if "CANVAS_CI_VISUAL_ACTIVE" not in game_test_text:
+    raise SystemExit("client GameTest never activated Canvas visual FEEL state")
 
 forbidden = [
     "File canvas:sounds/cues/coming_home.ogg does not exist",
