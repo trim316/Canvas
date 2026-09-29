@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import net.canvasmod.CanvasFeelProfile;
 import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.VillageLifePolicy;
+import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomecomingPolicy;
@@ -263,6 +264,31 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                         true, true, false, false, 12000L, 7L, 0, 0, 1L)
                         == RareSurprisePolicy.Moment.NONE,
                 "Rare surprises must respect the multi-day cooldown");
+        context.succeed();
+    }
+
+    @GameTest
+    public void weatherCharacterDistinguishesRoofStormAndCalm(GameTestHelper context) {
+        context.assertTrue(
+                WeatherCharacterPolicy.classify(true, true, true, false, Integer.MAX_VALUE)
+                        == WeatherCharacterPolicy.Character.RAIN_SHELTERED,
+                "Sheltered rain should create Rain on the Roof character");
+        context.assertTrue(
+                WeatherCharacterPolicy.classify(true, true, true, true, Integer.MAX_VALUE)
+                        == WeatherCharacterPolicy.Character.THUNDER_SHELTERED,
+                "Sheltered thunder should deepen the storm mood");
+        context.assertTrue(
+                WeatherCharacterPolicy.classify(true, true, false, false, 80)
+                        == WeatherCharacterPolicy.Character.CALM_AFTER_STORM,
+                "A sheltered HOME should briefly notice calm after rain ends");
+        context.assertTrue(
+                WeatherCharacterPolicy.classify(false, false, true, false, Integer.MAX_VALUE)
+                        == WeatherCharacterPolicy.Character.RAIN_EXPOSED,
+                "Exposed rain should remain owned by the mature companion acoustics stack");
+        context.assertTrue(
+                WeatherCharacterPolicy.usesCompanionAcousticsOnly(
+                        WeatherCharacterPolicy.Character.RAIN_EXPOSED),
+                "Canvas must not reinvent exposed/material rain acoustics");
         context.succeed();
     }
 

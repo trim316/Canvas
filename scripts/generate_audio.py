@@ -102,6 +102,8 @@ def main() -> None:
            one_shot(5.2, [(196.0,.08),(246.94,.07),(329.63,.055),(493.88,.028)], .16))
     encode(ROOT / "cues/rare_golden_hush.ogg",
            one_shot(5.8, [(174.61,.085),(220.0,.075),(277.18,.058),(349.23,.038),(523.25,.018)], .13))
+    encode(ROOT / "cues/calm_after_storm.ogg",
+           one_shot(4.6, [(196.0,.07),(246.94,.06),(311.13,.046),(392.0,.024)], .18))
 
     encode(ROOT / "music/village_wake.ogg",
            music_moment(12.0, [(196.0,.10),(246.94,.08),(293.66,.065),(392.0,.035)], .18, .35))
@@ -109,6 +111,11 @@ def main() -> None:
            music_moment(13.0, [(130.81,.11),(164.81,.085),(196.0,.060),(261.63,.032)], .12, .70))
     encode(ROOT / "music/community_gathering.ogg",
            music_moment(15.0, [(174.61,.09),(220.0,.08),(261.63,.068),(349.23,.040),(440.0,.025)], .24, .50))
+
+    encode(ROOT / "presence/rain_on_roof.ogg",
+           loop_samples(26.0, [(98.0,.075),(123.47,.055),(146.83,.038)], .92, .024))
+    encode(ROOT / "presence/thunder_shelter.ogg",
+           loop_samples(26.0, [(73.42,.10),(92.50,.067),(110.0,.045)], 1.18, .030))
 
     encode(ROOT / "presence/home_morning.ogg",
            loop_samples(28.0, [(164.81,.09),(220.0,.07),(277.18,.055),(329.63,.035)], .35, .014))

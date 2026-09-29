@@ -7,6 +7,7 @@ import net.canvasmod.HomeRecognitionAccumulator;
 import net.canvasmod.HomeStatePayload;
 import net.canvasmod.HomecomingPolicy;
 import net.canvasmod.RareSurprisePolicy;
+import net.canvasmod.WeatherCharacterPolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -50,12 +51,15 @@ final class CanvasFeelClient {
     private String ambienceKey = "";
     private boolean atHome;
     private boolean previousRaining;
+    private long rainEndedTick = Long.MIN_VALUE / 4;
     private boolean ciVisualAnnounced;
     private boolean ciRareAnnounced;
     private int familiarPulseTicks;
     private int homeTransitionPulseTicks;
     private int rareSurpriseTicks;
     private RareSurprisePolicy.Moment rareMoment = RareSurprisePolicy.Moment.NONE;
+    private WeatherCharacterPolicy.Character weatherCharacter = WeatherCharacterPolicy.Character.CLEAR;
+    private boolean ciWeatherAnnounced;
     private HomecomingPolicy.Flavor homecomingFlavor = HomecomingPolicy.Flavor.QUIET;
     private CanvasFeelProfile.Phase phase = CanvasFeelProfile.Phase.AWAY;
 
@@ -132,6 +136,10 @@ final class CanvasFeelClient {
         boolean sheltered = isSheltered(pos);
         boolean raining = client.level.isRaining();
         boolean thundering = client.level.isThundering();
+        if (previousRaining && !raining) rainEndedTick = tick;
+        int ticksSinceRainEnded = rainEndedTick <= Long.MIN_VALUE / 8
+                ? Integer.MAX_VALUE
+                : (int)Math.min(Integer.MAX_VALUE, tick - rainEndedTick);
         long clock = client.level.getOverworldClockTime();
         long dayTime = clock % 24000L;
         long worldDay = Math.floorDiv(clock, 24000L);
@@ -145,7 +153,28 @@ final class CanvasFeelClient {
 
         observeRareSurprise(raining, thundering, dayTime, worldDay);
 
-        if (phase != CanvasFeelProfile.Phase.AWAY) {
+        WeatherCharacterPolicy.Character nextWeather =
+                WeatherCharacterPolicy.classify(atHome, sheltered, raining, thundering, ticksSinceRainEnded);
+        if (CI_VISUAL_TEST && tick >= 220 && tick < 300) {
+            nextWeather = WeatherCharacterPolicy.Character.THUNDER_SHELTERED;
+            if (!ciWeatherAnnounced) {
+                System.out.println("CANVAS_CI_WEATHER_CHARACTER_ACTIVE");
+                ciWeatherAnnounced = true;
+            }
+        }
+        if (nextWeather == WeatherCharacterPolicy.Character.CALM_AFTER_STORM
+                && weatherCharacter != WeatherCharacterPolicy.Character.CALM_AFTER_STORM) {
+            playCue("feel.calm_after_storm", 0.26f, 1.03f);
+        }
+        weatherCharacter = nextWeather;
+
+        String weatherAmbience = WeatherCharacterPolicy.ambienceEvent(weatherCharacter);
+        if (!weatherAmbience.isBlank()) {
+            setAmbience(
+                    weatherAmbience,
+                    WeatherCharacterPolicy.ambienceVolume(weatherCharacter),
+                    WeatherCharacterPolicy.ambiencePitch(weatherCharacter));
+        } else if (phase != CanvasFeelProfile.Phase.AWAY) {
             setAmbience(
                     CanvasFeelProfile.ambienceEvent(phase),
                     CanvasFeelProfile.volume(phase, sheltered),
@@ -311,14 +340,23 @@ final class CanvasFeelClient {
 
         int wash = CanvasFeelProfile.washArgb(phase);
         int edge = CanvasFeelProfile.edgeArgb(phase);
+        int weatherWash = WeatherCharacterPolicy.washArgb(weatherCharacter);
+        int weatherEdge = WeatherCharacterPolicy.edgeArgb(weatherCharacter);
 
         if (wash != 0) graphics.fill(0, 0, width, height, wash);
+        if (weatherWash != 0) graphics.fill(0, 0, width, height, weatherWash);
         if (edge != 0) {
             int band = Math.max(5, Math.min(width, height) / 32);
             graphics.fill(0, 0, width, band, edge);
             graphics.fill(0, height - band, width, height, edge);
             graphics.fill(0, band, band, height - band, edge);
             graphics.fill(width - band, band, width, height - band, edge);
+        }
+
+        if (weatherEdge != 0) {
+            int weatherBand = Math.max(3, Math.min(width, height) / 52);
+            graphics.fill(0, 0, width, weatherBand, weatherEdge);
+            graphics.fill(0, height - weatherBand, width, height, weatherEdge);
         }
 
         if (homeTransitionPulseTicks > 0 && atHome) {
