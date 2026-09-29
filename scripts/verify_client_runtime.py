@@ -44,7 +44,7 @@ if not log.exists():
 
 text = log.read_text(encoding="utf-8", errors="replace")
 required = [
-    "canvas 0.2.0-alpha.3",
+    "canvas 0.2.0-alpha.4",
     "coolrain",
     "sound_physics_remastered",
     "Reloading ResourceManager:",
