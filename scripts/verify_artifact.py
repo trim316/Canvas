@@ -45,7 +45,6 @@ required_resources = [
     "assets/canvas/sounds/presence/home_evening.ogg",
     "assets/canvas/sounds/presence/home_night.ogg",
     "assets/canvas/sounds/presence/home_storm.ogg",
-    "assets/canvas/sounds/presence/hearth_air_v0.ogg",
     "assets/canvas/sounds/presence/harbor_air_v0.ogg",
     "assets/canvas/sounds/presence/void_stillness_v0.ogg",
 ]
