@@ -17,6 +17,9 @@ ROOT_PROJECTS = [
     "ambientsounds",
     "dcme-dynamic-contextual-music-engine",
     "sound",
+    "presence-footsteps",
+    "particle-rain",
+    "visuality",
 ]
 
 OUT = pathlib.Path("ci-mods")

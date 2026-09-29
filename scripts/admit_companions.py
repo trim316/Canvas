@@ -19,6 +19,9 @@ OPTIONAL_ROOTS = [
     "ambientsounds",
     "dcme-dynamic-contextual-music-engine",
     "sound",
+    "presence-footsteps",
+    "particle-rain",
+    "visuality",
 ]
 
 

@@ -169,7 +169,7 @@ jobs:
           echo "- real server GameTests"
           echo "- real client GameTests with quantitative screenshot delta"
           echo "- packaged production client under Xvfb"
-          echo "- automated companion admission with incompatible optional mods quarantined"
+          echo "- automated ambience/music/footstep/weather/particle companion admission with incompatible optional mods quarantined"
           echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"
 
