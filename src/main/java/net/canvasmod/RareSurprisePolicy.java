@@ -20,7 +20,7 @@ public final class RareSurprisePolicy {
                 && rareDay(worldDay, homeX, homeZ, 5)) {
             return Moment.GOLDEN_HUSH;
         }
-        if (!raining && time >= 15000L && time < 21000L
+        if (!raining && time >= 17500L && time < 21500L
                 && rareDay(worldDay, homeX, homeZ, 11)) {
             return Moment.STARLIT_STILLNESS;
         }
@@ -41,11 +41,29 @@ public final class RareSurprisePolicy {
         };
     }
 
+    public static float cuePitch(Moment moment) {
+        return switch (moment) {
+            case STORM_BREAK -> 1.02f;
+            case GOLDEN_HUSH -> 0.98f;
+            case STARLIT_STILLNESS -> 0.92f;
+            case NONE -> 1.0f;
+        };
+    }
+
     public static int washArgb(Moment moment) {
         return switch (moment) {
             case STORM_BREAK -> 0x20B8D8FF;
             case GOLDEN_HUSH -> 0x24FFD47A;
-            case STARLIT_STILLNESS -> 0x181B2B55;
+            case STARLIT_STILLNESS -> 0x201E2A58;
+            case NONE -> 0;
+        };
+    }
+
+    public static int shimmerArgb(Moment moment) {
+        return switch (moment) {
+            case STORM_BREAK -> 0x5CAADFFF;
+            case GOLDEN_HUSH -> 0x62FFE09A;
+            case STARLIT_STILLNESS -> 0x5CB8C7FF;
             case NONE -> 0;
         };
     }
