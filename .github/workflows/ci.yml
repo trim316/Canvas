@@ -1,0 +1,42 @@
+name: Canvas 26.2 CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle 9.5.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.1"
+
+      - name: Build and verify
+        run: gradle clean build --no-daemon --stacktrace
+
+      - name: Inspect Fabric metadata
+        run: |
+          python3 scripts/verify_artifact.py build/libs/*.jar
+
+      - name: Upload proven candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: canvas-26.2-candidate
+          path: build/libs/*.jar
+          if-no-files-found: error
