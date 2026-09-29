@@ -5,6 +5,12 @@
       { "name": "canvas:cues/coming_home", "stream": false, "volume": 1.0 }
     ]
   },
+  "feel.familiar_face": {
+    "subtitle": "subtitles.canvas.feel.familiar_face",
+    "sounds": [
+      { "name": "canvas:cues/familiar_face", "stream": false, "volume": 1.0 }
+    ]
+  },
   "presence.hearth_air": {
     "sounds": [
       { "name": "canvas:presence/hearth_air_v0", "stream": true, "volume": 1.0 }
