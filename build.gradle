@@ -66,6 +66,5 @@ tasks.withType(Test).configureEach {
 tasks.register("runProductionClientGameTest", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
     jvmArgs.add("-Dfabric.client.gametest")
     jvmArgs.add("-Dfabric.client.gametest.disableNetworkSynchronizer=true")
-    jvmArgs.add("-Dcanvas.home.requiredSamples=1")
     useXVFB = true
 }

@@ -24,6 +24,8 @@ final class CanvasFeelClient {
     private static final double AWAY_RADIUS_SQ = 54.0 * 54.0;
     private static final int MIN_AWAY_TICKS = 600;
     private static final int RETURN_COOLDOWN = 2400;
+    private static final boolean CI_VISUAL_TEST =
+            Boolean.parseBoolean(System.getenv().getOrDefault("CANVAS_VISUAL_TEST", "false"));
 
     private final Minecraft client = Minecraft.getInstance();
     private final HomeRecognitionAccumulator accumulator = new HomeRecognitionAccumulator();
@@ -39,6 +41,7 @@ final class CanvasFeelClient {
     private CanvasLoopingSound ambience;
     private String ambienceKey = "";
     private boolean atHome;
+    private boolean ciVisualAnnounced;
 
     void register() {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
@@ -63,7 +66,22 @@ final class CanvasFeelClient {
         if (client.level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4) == null) return;
 
         String dimension = client.level.dimension().identifier().toString();
-        if (!hasHome && tick % SAMPLE_INTERVAL == 0) learnHome(dimension, pos);
+
+        if (CI_VISUAL_TEST && tick >= 60) {
+            if (!hasHome) {
+                hasHome = true;
+                homeDimension = dimension;
+                homeX = pos.getX();
+                homeY = pos.getY();
+                homeZ = pos.getZ();
+            }
+            if (!ciVisualAnnounced) {
+                System.out.println("CANVAS_CI_VISUAL_ACTIVE");
+                ciVisualAnnounced = true;
+            }
+        } else if (!hasHome && tick % SAMPLE_INTERVAL == 0) {
+            learnHome(dimension, pos);
+        }
 
         atHome = hasHome
                 && homeDimension.equals(dimension)
@@ -176,18 +194,33 @@ final class CanvasFeelClient {
         int height = client.getWindow().getGuiScaledHeight();
         long dayTime = client.level.getOverworldClockTime() % 24000L;
 
-        int color = 0;
+        int wash = 0;
+        int edge = 0;
         if (atHome) {
-            if (dayTime >= 13000L && dayTime < 22500L) color = 0x14F6B565;
-            else if (dayTime >= 11500L && dayTime < 14000L) color = 0x11FFCA82;
-            else color = 0x0DFFE3AD;
+            if (dayTime >= 13000L && dayTime < 22500L) {
+                wash = 0x12F3A85A;
+                edge = 0x22FFB35C;
+            } else if (dayTime >= 11500L && dayTime < 14000L) {
+                wash = 0x10FFC77A;
+                edge = 0x1EFFB15D;
+            } else {
+                wash = 0x0CFFE0A5;
+                edge = 0x18FFC77A;
+            }
         } else if (dayTime >= 11500L && dayTime < 14000L) {
-            color = 0x060E2740;
+            wash = 0x060E2740;
         } else if (dayTime >= 13000L && dayTime < 22500L) {
-            color = 0x07040B18;
+            wash = 0x07040B18;
         }
 
-        if (color != 0) graphics.fill(0, 0, width, height, color);
+        if (wash != 0) graphics.fill(0, 0, width, height, wash);
+        if (edge != 0) {
+            int band = Math.max(6, Math.min(width, height) / 28);
+            graphics.fill(0, 0, width, band, edge);
+            graphics.fill(0, height - band, width, height, edge);
+            graphics.fill(0, band, band, height - band, edge);
+            graphics.fill(width - band, band, width, height - band, edge);
+        }
     }
 
     private void setAmbience(String key, float volume, float pitch) {

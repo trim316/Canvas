@@ -27,6 +27,14 @@ jobs:
           distribution: temurin
           java-version: "25"
 
+      - name: Install deterministic audio encoder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Generate Canvas-owned ambience
+        run: python3 scripts/generate_audio.py
+
       - name: Set up Gradle 9.5.1
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -60,12 +68,13 @@ jobs:
           if-no-files-found: error
 
   client_gametest:
-    name: Headless client + screenshots + companions
+    name: Client GameTests + production companions
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     needs: build_server_gametest
     env:
       ALSOFT_DRIVERS: "null"
+      CANVAS_VISUAL_TEST: "true"
     steps:
       - uses: actions/checkout@v4
 
@@ -75,10 +84,13 @@ jobs:
           distribution: temurin
           java-version: "25"
 
-      - name: Install virtual display and audio runtime
+      - name: Install virtual display, audio runtime, and encoder
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libgl1-mesa-dri libgl1 libopenal1
+          sudo apt-get install -y xvfb libgl1-mesa-dri libgl1 libopenal1 ffmpeg
+
+      - name: Generate Canvas-owned ambience
+        run: python3 scripts/generate_audio.py
 
       - name: Resolve pinned companion mods
         run: python3 scripts/fetch_companions.py
@@ -88,20 +100,30 @@ jobs:
         with:
           gradle-version: "9.5.1"
 
-      - name: Launch production Minecraft client GameTests
+      - name: Run real Fabric client GameTests
+        run: gradle runClientGameTest --no-daemon --stacktrace
+
+      - name: Preserve client GameTest screenshots
+        shell: bash
+        run: |
+          mkdir -p ci-evidence/client
+          find build/run/clientGameTest/screenshots -type f -name '*.png' -print -exec cp {} ci-evidence/client/ \;
+          test "$(find ci-evidence/client -type f -name '*.png' | wc -l)" -ge 2
+
+      - name: Launch packaged production client with companions
         run: gradle runProductionClientGameTest --no-daemon --stacktrace
 
-      - name: Collect client evidence
+      - name: Verify production client evidence
+        run: python3 scripts/verify_client_runtime.py
+
+      - name: Collect client logs
         if: always()
         shell: bash
         run: |
           mkdir -p ci-evidence/client
-          find . -type f \( -name '*.png' -o -name 'latest.log' -o -name 'debug.log' -o -path '*/crash-reports/*' \) -print > ci-evidence/client/files.txt
-          while IFS= read -r file; do
-            [ -f "$file" ] || continue
-            safe="$(echo "$file" | sed 's#^./##; s#/#__#g')"
-            cp "$file" "ci-evidence/client/$safe"
-          done < ci-evidence/client/files.txt
+          [ -f run/logs/latest.log ] && cp run/logs/latest.log ci-evidence/client/production-latest.log || true
+          [ -f run/logs/debug.log ] && cp run/logs/debug.log ci-evidence/client/production-debug.log || true
+          find . -type f -path '*/crash-reports/*' -exec cp {} ci-evidence/client/ \; || true
 
       - name: Upload client screenshots and logs
         if: always()
@@ -125,6 +147,8 @@ jobs:
           echo "- semantic HOME policy GameTests"
           echo "- all-Mob familiarity policy GameTests"
           echo "- real server GameTests"
-          echo "- headless production client under Xvfb"
+          echo "- real client GameTests with screenshots"
+          echo "- packaged production client under Xvfb"
           echo "- Cool Rain + Sound Physics Remastered compatibility launch"
+          echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"

@@ -9,8 +9,10 @@ public final class CanvasClientGameTest implements FabricClientGameTest {
     @Override
     public void runTest(ClientGameTestContext context) {
         try (TestSingleplayerContext singleplayer = context.worldBuilder().create()) {
+            context.waitTicks(20);
+            context.takeScreenshot("canvas-before-feel");
             context.waitTicks(80);
-            context.takeScreenshot("canvas-client-world-loaded");
+            context.takeScreenshot("canvas-after-feel");
         }
     }
 }

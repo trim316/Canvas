@@ -7,17 +7,17 @@
   },
   "presence.hearth_air": {
     "sounds": [
-      { "name": "canvas:presence/hearth_air_v0", "stream": false, "volume": 1.0 }
+      { "name": "canvas:presence/hearth_air_v0", "stream": true, "volume": 1.0 }
     ]
   },
   "presence.harbor_air": {
     "sounds": [
-      { "name": "canvas:presence/harbor_air_v0", "stream": false, "volume": 1.0 }
+      { "name": "canvas:presence/harbor_air_v0", "stream": true, "volume": 1.0 }
     ]
   },
   "presence.void_stillness": {
     "sounds": [
-      { "name": "canvas:presence/void_stillness_v0", "stream": false, "volume": 1.0 }
+      { "name": "canvas:presence/void_stillness_v0", "stream": true, "volume": 1.0 }
     ]
   }
 }

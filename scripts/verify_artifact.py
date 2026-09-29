@@ -32,6 +32,15 @@ required_classes = [
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required
 
-assert "assets/canvas/sounds.json" in names
-assert "assets/canvas/lang/en_us.json" in names
+required_resources = [
+    "assets/canvas/sounds.json",
+    "assets/canvas/lang/en_us.json",
+    "assets/canvas/sounds/cues/coming_home.ogg",
+    "assets/canvas/sounds/presence/hearth_air_v0.ogg",
+    "assets/canvas/sounds/presence/harbor_air_v0.ogg",
+    "assets/canvas/sounds/presence/void_stillness_v0.ogg",
+]
+for required in required_resources:
+    assert required in names, required
+
 print("artifact verification: PASS", jar)
