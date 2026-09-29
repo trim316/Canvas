@@ -45,7 +45,7 @@ text = log.read_text(encoding="utf-8", errors="replace")
 text_lower = text.lower()
 
 required = [
-    "canvas 0.2.0-alpha.11",
+    "canvas 0.2.0-alpha.12",
     "Reloading ResourceManager:",
     "Sound engine started",
 ]
@@ -78,9 +78,16 @@ if "CANVAS_CI_VISUAL_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas visual FEEL state")
 if "CANVAS_CI_VILLAGE_RHYTHM_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas village rhythm presentation")
+if "CANVAS_CI_RARE_SURPRISE_ACTIVE" not in game_test_text:
+    raise SystemExit("client GameTest never activated Canvas rare-surprise presentation")
 
 forbidden = [
     "File canvas:sounds/cues/coming_home.ogg does not exist",
+    "File canvas:sounds/cues/coming_home_familiar.ogg does not exist",
+    "File canvas:sounds/cues/coming_home_village.ogg does not exist",
+    "File canvas:sounds/cues/coming_home_lived_in.ogg does not exist",
+    "File canvas:sounds/cues/rare_storm_break.ogg does not exist",
+    "File canvas:sounds/cues/rare_golden_hush.ogg does not exist",
     "File canvas:sounds/cues/familiar_face.ogg does not exist",
     "File canvas:sounds/cues/home_shift.ogg does not exist",
     "File canvas:sounds/music/village_wake.ogg does not exist",

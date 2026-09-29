@@ -24,14 +24,16 @@ final class CanvasFamiliarityClient {
     private static final int MAX_OBSERVED_TICKS = 20 * 60 * 60;
 
     private final CanvasFeelClient feel;
+    private final CanvasExperienceDirector director;
     private final Map<UUID, Integer> familiarity = new HashMap<>();
     private final Map<UUID, Long> lastCue = new HashMap<>();
     private final Path stateFile = FabricLoader.getInstance().getConfigDir()
             .resolve("canvas-familiarity-v1.properties");
     private long tick;
 
-    CanvasFamiliarityClient(CanvasFeelClient feel) {
+    CanvasFamiliarityClient(CanvasFeelClient feel, CanvasExperienceDirector director) {
         this.feel = feel;
+        this.director = director;
     }
 
     void register() {
@@ -45,16 +47,24 @@ final class CanvasFamiliarityClient {
     }
 
     private void sample(Minecraft client) {
-        if (client.level == null || client.player == null) return;
+        if (client.level == null || client.player == null) {
+            director.setFamiliarNearby(false);
+            return;
+        }
+
         var box = client.player.getBoundingBox().inflate(FamiliarityPolicy.OBSERVATION_RADIUS);
+        boolean familiarNearby = false;
 
         for (Entity entity : client.level.getEntities(client.player, box, e -> e instanceof Mob)) {
             if (!(entity instanceof Mob mob) || !mob.isAlive()) continue;
-            familiarity.merge(
+            int observed = familiarity.merge(
                     mob.getUUID(),
                     FamiliarityPolicy.SAMPLE_INTERVAL_TICKS,
                     (oldValue, increment) -> Math.min(MAX_OBSERVED_TICKS, oldValue + increment));
+            if (observed >= FamiliarityPolicy.REQUIRED_OBSERVATION_TICKS) familiarNearby = true;
         }
+
+        director.setFamiliarNearby(familiarNearby);
         prune();
     }
 

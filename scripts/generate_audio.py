@@ -92,6 +92,16 @@ def main() -> None:
            one_shot(2.2, [(392.0,.10),(493.88,.08),(587.33,.06)], .55))
     encode(ROOT / "cues/home_shift.ogg",
            one_shot(3.6, [(220.0,.10),(277.18,.08),(329.63,.07),(440.0,.04)], .24))
+    encode(ROOT / "cues/coming_home_familiar.ogg",
+           one_shot(6.4, [(130.81,.16),(164.81,.13),(196.0,.11),(293.66,.06),(392.0,.03)], .09))
+    encode(ROOT / "cues/coming_home_village.ogg",
+           one_shot(6.8, [(146.83,.15),(185.0,.12),(220.0,.10),(293.66,.06),(440.0,.028)], .08))
+    encode(ROOT / "cues/coming_home_lived_in.ogg",
+           one_shot(7.2, [(130.81,.16),(164.81,.14),(196.0,.11),(261.63,.075),(329.63,.05),(392.0,.025)], .07))
+    encode(ROOT / "cues/rare_storm_break.ogg",
+           one_shot(5.2, [(196.0,.08),(246.94,.07),(329.63,.055),(493.88,.028)], .16))
+    encode(ROOT / "cues/rare_golden_hush.ogg",
+           one_shot(5.8, [(174.61,.085),(220.0,.075),(277.18,.058),(349.23,.038),(523.25,.018)], .13))
 
     encode(ROOT / "music/village_wake.ogg",
            music_moment(12.0, [(196.0,.10),(246.94,.08),(293.66,.065),(392.0,.035)], .18, .35))

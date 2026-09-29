@@ -25,11 +25,16 @@ final class CanvasVillageLifeClient {
             Boolean.parseBoolean(System.getenv().getOrDefault("CANVAS_VISUAL_TEST", "false"));
 
     private final Minecraft client = Minecraft.getInstance();
+    private final CanvasExperienceDirector director;
     private long tick;
     private long lastMusicMoment = Long.MIN_VALUE / 4L;
     private VillageLifePolicy.Rhythm rhythm = VillageLifePolicy.Rhythm.NONE;
     private int presentationTicks;
     private boolean ciAnnounced;
+
+    CanvasVillageLifeClient(CanvasExperienceDirector director) {
+        this.director = director;
+    }
 
     void register() {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
@@ -46,6 +51,7 @@ final class CanvasVillageLifeClient {
     private void update() {
         if (client.level == null || client.player == null) {
             rhythm = VillageLifePolicy.Rhythm.NONE;
+            director.setVillageRhythm(rhythm);
             presentationTicks = 0;
             return;
         }
@@ -79,6 +85,7 @@ final class CanvasVillageLifeClient {
         }
 
         rhythm = next;
+        director.setVillageRhythm(rhythm);
         if (presentationTicks > 0) presentationTicks = Math.max(0, presentationTicks - 20);
     }
 

@@ -21,6 +21,8 @@ assert "0.157.0+26.2" in meta["depends"]["fabric-api"]
 required_classes = [
     "CanvasMod.class",
     "CanvasFeelProfile.class",
+    "HomecomingPolicy.class",
+    "RareSurprisePolicy.class",
     "VillageLifePolicy.class",
     "ContextualMusicPolicy.class",
     "HomeStatePayload.class",
@@ -32,6 +34,7 @@ required_classes = [
     "FamiliarityPolicy.class",
     "CanvasFamiliarityClient.class",
     "CanvasFeelClient.class",
+    "CanvasExperienceDirector.class",
     "CanvasVillageLifeClient.class",
 ]
 for required in required_classes:
@@ -41,6 +44,11 @@ required_resources = [
     "assets/canvas/sounds.json",
     "assets/canvas/lang/en_us.json",
     "assets/canvas/sounds/cues/coming_home.ogg",
+    "assets/canvas/sounds/cues/coming_home_familiar.ogg",
+    "assets/canvas/sounds/cues/coming_home_village.ogg",
+    "assets/canvas/sounds/cues/coming_home_lived_in.ogg",
+    "assets/canvas/sounds/cues/rare_storm_break.ogg",
+    "assets/canvas/sounds/cues/rare_golden_hush.ogg",
     "assets/canvas/sounds/cues/familiar_face.ogg",
     "assets/canvas/sounds/cues/home_shift.ogg",
     "assets/canvas/sounds/music/village_wake.ogg",

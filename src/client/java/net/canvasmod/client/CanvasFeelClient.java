@@ -5,6 +5,8 @@ import net.canvasmod.CanvasFeelProfile;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
 import net.canvasmod.HomeStatePayload;
+import net.canvasmod.HomecomingPolicy;
+import net.canvasmod.RareSurprisePolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -32,6 +34,7 @@ final class CanvasFeelClient {
 
     private final Minecraft client = Minecraft.getInstance();
     private final HomeRecognitionAccumulator accumulator = new HomeRecognitionAccumulator();
+    private final CanvasExperienceDirector director;
 
     private long tick;
     private boolean hasHome;
@@ -42,13 +45,23 @@ final class CanvasFeelClient {
     private long awaySince = -1;
     private long lastReturnCue = Long.MIN_VALUE / 4;
     private long lastPhaseCue = Long.MIN_VALUE / 4;
+    private long lastSurpriseDay = Long.MIN_VALUE / 4;
     private CanvasLoopingSound ambience;
     private String ambienceKey = "";
     private boolean atHome;
+    private boolean previousRaining;
     private boolean ciVisualAnnounced;
+    private boolean ciRareAnnounced;
     private int familiarPulseTicks;
     private int homeTransitionPulseTicks;
+    private int rareSurpriseTicks;
+    private RareSurprisePolicy.Moment rareMoment = RareSurprisePolicy.Moment.NONE;
+    private HomecomingPolicy.Flavor homecomingFlavor = HomecomingPolicy.Flavor.QUIET;
     private CanvasFeelProfile.Phase phase = CanvasFeelProfile.Phase.AWAY;
+
+    CanvasFeelClient(CanvasExperienceDirector director) {
+        this.director = director;
+    }
 
     void acceptServerHome(HomeStatePayload payload) {
         hasHome = true;
@@ -80,6 +93,7 @@ final class CanvasFeelClient {
         if (client.level == null || client.player == null) {
             atHome = false;
             phase = CanvasFeelProfile.Phase.AWAY;
+            previousRaining = false;
             stopAmbience(30);
             return;
         }
@@ -113,11 +127,14 @@ final class CanvasFeelClient {
         observeReturn(dimension);
         if (familiarPulseTicks > 0) familiarPulseTicks = Math.max(0, familiarPulseTicks - 20);
         if (homeTransitionPulseTicks > 0) homeTransitionPulseTicks = Math.max(0, homeTransitionPulseTicks - 20);
+        if (rareSurpriseTicks > 0) rareSurpriseTicks = Math.max(0, rareSurpriseTicks - 20);
 
         boolean sheltered = isSheltered(pos);
         boolean raining = client.level.isRaining();
         boolean thundering = client.level.isThundering();
-        long dayTime = client.level.getOverworldClockTime() % 24000L;
+        long clock = client.level.getOverworldClockTime();
+        long dayTime = clock % 24000L;
+        long worldDay = Math.floorDiv(clock, 24000L);
 
         CanvasFeelProfile.Phase nextPhase =
                 CanvasFeelProfile.classify(atHome, sheltered, raining, thundering, dayTime);
@@ -125,6 +142,8 @@ final class CanvasFeelClient {
             onPhaseChanged(phase, nextPhase);
             phase = nextPhase;
         }
+
+        observeRareSurprise(raining, thundering, dayTime, worldDay);
 
         if (phase != CanvasFeelProfile.Phase.AWAY) {
             setAmbience(
@@ -134,6 +153,34 @@ final class CanvasFeelClient {
         } else {
             setAwayAmbience(dayTime, sheltered);
         }
+
+        previousRaining = raining;
+    }
+
+    private void observeRareSurprise(boolean raining, boolean thundering, long dayTime, long worldDay) {
+        if (CI_VISUAL_TEST && tick >= 180 && !ciRareAnnounced) {
+            presentRareSurprise(RareSurprisePolicy.Moment.GOLDEN_HUSH, worldDay);
+            System.out.println("CANVAS_CI_RARE_SURPRISE_ACTIVE");
+            ciRareAnnounced = true;
+            return;
+        }
+
+        long daysSinceLast = lastSurpriseDay <= Long.MIN_VALUE / 8
+                ? Long.MAX_VALUE / 4
+                : worldDay - lastSurpriseDay;
+        RareSurprisePolicy.Moment candidate = RareSurprisePolicy.classify(
+                atHome, previousRaining, raining, thundering, dayTime,
+                worldDay, homeX, homeZ, daysSinceLast);
+        if (candidate != RareSurprisePolicy.Moment.NONE) presentRareSurprise(candidate, worldDay);
+    }
+
+    private void presentRareSurprise(RareSurprisePolicy.Moment moment, long worldDay) {
+        String event = RareSurprisePolicy.cueEvent(moment);
+        if (event.isBlank()) return;
+        playCue(event, 0.34f, moment == RareSurprisePolicy.Moment.STORM_BREAK ? 1.02f : 0.98f);
+        rareMoment = moment;
+        rareSurpriseTicks = 140;
+        lastSurpriseDay = worldDay;
     }
 
     private void onPhaseChanged(CanvasFeelProfile.Phase previous, CanvasFeelProfile.Phase next) {
@@ -184,8 +231,9 @@ final class CanvasFeelClient {
         homeY = (int)Math.floor(accumulator.y());
         homeZ = (int)Math.floor(accumulator.z());
         client.player.sendSystemMessage(Component.literal("Canvas · Home recognized"));
-        playCue("feel.coming_home", 0.34f, 1.0f);
-        homeTransitionPulseTicks = 100;
+        homecomingFlavor = director.homecomingFlavor();
+        playCue(HomecomingPolicy.cueEvent(homecomingFlavor), 0.36f, 1.0f);
+        homeTransitionPulseTicks = HomecomingPolicy.pulseTicks(homecomingFlavor);
     }
 
     private boolean isSheltered(BlockPos center) {
@@ -243,8 +291,12 @@ final class CanvasFeelClient {
 
         if (atHome && awaySince >= 0) {
             if (tick - awaySince >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
-                playCue("feel.coming_home", 0.48f, 1.0f);
-                homeTransitionPulseTicks = 120;
+                homecomingFlavor = director.homecomingFlavor();
+                playCue(
+                        HomecomingPolicy.cueEvent(homecomingFlavor),
+                        HomecomingPolicy.volume(homecomingFlavor),
+                        1.0f);
+                homeTransitionPulseTicks = HomecomingPolicy.pulseTicks(homecomingFlavor);
                 lastReturnCue = tick;
             }
             awaySince = -1;
@@ -271,9 +323,25 @@ final class CanvasFeelClient {
 
         if (homeTransitionPulseTicks > 0 && atHome) {
             int band = Math.max(3, Math.min(width, height) / 70);
-            int pulse = 0x36FFD18A;
+            int pulse = switch (homecomingFlavor) {
+                case QUIET -> 0x30FFD18A;
+                case FAMILIAR -> 0x38FFE0A0;
+                case VILLAGE -> 0x38FFC978;
+                case LIVED_IN -> 0x44FFD78C;
+            };
             graphics.fill(0, 0, width, band, pulse);
             graphics.fill(0, height - band, width, height, pulse);
+        }
+
+        if (rareSurpriseTicks > 0) {
+            int rareWash = RareSurprisePolicy.washArgb(rareMoment);
+            graphics.fill(0, 0, width, height, rareWash);
+            int inset = Math.max(10, Math.min(width, height) / 18);
+            int shimmer = rareMoment == RareSurprisePolicy.Moment.STORM_BREAK
+                    ? 0x5CAADFFF
+                    : 0x62FFE09A;
+            graphics.fill(inset, inset, width - inset, inset + 2, shimmer);
+            graphics.fill(inset, height - inset - 2, width - inset, height - inset, shimmer);
         }
 
         if (familiarPulseTicks > 0) {
@@ -334,7 +402,7 @@ final class CanvasFeelClient {
         @Override
         public void tick() {
             age++;
-            if (age >= 160) stop();
+            if (age >= 180) stop();
         }
     }
 

@@ -6,6 +6,8 @@ import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.HomeEvidenceDetector;
+import net.canvasmod.HomecomingPolicy;
+import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
@@ -218,6 +220,49 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                         VillageLifePolicy.Rhythm.WIND_DOWN,
                         ContextualMusicPolicy.GENERAL_COOLDOWN_TICKS),
                 "A meaningful rhythm transition should be musically eligible");
+        context.succeed();
+    }
+
+    @GameTest
+    public void comingHomeV2CombinesVillageAndFamiliarContext(GameTestHelper context) {
+        context.assertTrue(
+                HomecomingPolicy.classify(true, VillageLifePolicy.Rhythm.GATHERING)
+                        == HomecomingPolicy.Flavor.LIVED_IN,
+                "Familiar mobs plus settlement life should create the richest homecoming flavor");
+        context.assertTrue(
+                HomecomingPolicy.classify(false, VillageLifePolicy.Rhythm.WIND_DOWN)
+                        == HomecomingPolicy.Flavor.VILLAGE,
+                "Settlement rhythm should enrich homecoming without requiring a familiar mob");
+        context.assertTrue(
+                HomecomingPolicy.classify(true, VillageLifePolicy.Rhythm.NONE)
+                        == HomecomingPolicy.Flavor.FAMILIAR,
+                "A familiar mob should enrich a quiet homecoming");
+        context.assertTrue(
+                HomecomingPolicy.classify(false, VillageLifePolicy.Rhythm.NONE)
+                        == HomecomingPolicy.Flavor.QUIET,
+                "A quiet home should remain restrained");
+        context.succeed();
+    }
+
+    @GameTest
+    public void rareSurprisesRemainRareAndContextBound(GameTestHelper context) {
+        int rareDays = 0;
+        for (long day = 0; day < 28; day++) {
+            if (RareSurprisePolicy.rareDay(day, 0, 0, 5)) rareDays++;
+        }
+        context.assertTrue(rareDays >= 3 && rareDays <= 5,
+                "Rare day cadence should stay sparse over four Minecraft weeks: " + rareDays);
+
+        context.assertTrue(
+                RareSurprisePolicy.classify(
+                        false, true, false, false, 12000L, 7L, 0, 0, 99L)
+                        == RareSurprisePolicy.Moment.NONE,
+                "Rare surprises must not fire outside HOME");
+        context.assertTrue(
+                RareSurprisePolicy.classify(
+                        true, true, false, false, 12000L, 7L, 0, 0, 1L)
+                        == RareSurprisePolicy.Moment.NONE,
+                "Rare surprises must respect the multi-day cooldown");
         context.succeed();
     }
 
