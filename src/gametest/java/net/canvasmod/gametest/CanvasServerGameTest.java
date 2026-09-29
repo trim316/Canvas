@@ -8,7 +8,9 @@ import net.canvasmod.HomeRecognitionAccumulator;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Blocks;
 
 public final class CanvasServerGameTest implements CustomTestMethodInvoker {
@@ -64,7 +66,8 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
             }
         }
 
-        context.setBlock(2, 2, 2, Blocks.RED_BED);
+        context.setBlock(2, 2, 2, BuiltInRegistries.BLOCK.getValue(
+                Identifier.fromNamespaceAndPath("minecraft", "red_bed")));
         context.setBlock(4, 2, 2, Blocks.CHEST);
         context.setBlock(4, 2, 4, Blocks.CRAFTING_TABLE);
         context.setBlock(2, 2, 4, Blocks.LANTERN);
