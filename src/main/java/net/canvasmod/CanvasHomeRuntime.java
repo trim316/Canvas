@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -49,6 +50,14 @@ final class CanvasHomeRuntime {
         tick = 0;
     }
 
+    void syncPlayer(ServerPlayer player) {
+        State state = states.get(player.getUUID());
+        if (state == null || state.homeDimension == null) return;
+        sendHome(player, state);
+        evidence("home_sync", player.getUUID().toString(),
+                "tick=" + tick + ",dimension=" + state.homeDimension + ",score=" + state.homeScore);
+    }
+
     private void observe(ServerPlayer player) {
         ServerLevel level = player.level();
         BlockPos center = player.blockPosition();
@@ -85,7 +94,15 @@ final class CanvasHomeRuntime {
         evidence("home_recognized", player.getUUID().toString(),
                 "tick=" + tick + "," + summary);
         player.sendSystemMessage(Component.literal("Canvas · Home recognized"));
+        sendHome(player, state);
         save();
+    }
+
+    private void sendHome(ServerPlayer player, State state) {
+        ServerPlayNetworking.send(player, new HomeStatePayload(
+                state.homeDimension,
+                new BlockPos(state.homeX, state.homeY, state.homeZ),
+                state.homeScore));
     }
 
     void save() {
