@@ -3,6 +3,7 @@ package net.canvasmod.client;
 import java.util.Locale;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
+import net.canvasmod.HomeStatePayload;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -42,6 +43,15 @@ final class CanvasFeelClient {
     private String ambienceKey = "";
     private boolean atHome;
     private boolean ciVisualAnnounced;
+
+    void acceptServerHome(HomeStatePayload payload) {
+        hasHome = true;
+        homeDimension = payload.dimension();
+        homeX = payload.pos().getX();
+        homeY = payload.pos().getY();
+        homeZ = payload.pos().getZ();
+        accumulator.reset();
+    }
 
     void register() {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
