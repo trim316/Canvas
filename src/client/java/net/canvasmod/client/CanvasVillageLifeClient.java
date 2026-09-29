@@ -3,6 +3,7 @@ package net.canvasmod.client;
 import java.util.ArrayList;
 import java.util.List;
 import net.canvasmod.ContextualMusicPolicy;
+import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -77,7 +78,8 @@ final class CanvasVillageLifeClient {
         long sinceLast = tick - lastMusicMoment;
         if (ContextualMusicPolicy.shouldPresent(rhythm, next, sinceLast)) {
             String event = ContextualMusicPolicy.eventFor(next);
-            if (!event.isBlank()) {
+            if (!event.isBlank()
+                    && director.allowMoment(MomentDensityPolicy.Kind.VILLAGE_RHYTHM, tick, true)) {
                 playMusicMoment(event, musicVolume(next), musicPitch(next));
                 presentationTicks = next == VillageLifePolicy.Rhythm.GATHERING ? 120 : 80;
                 lastMusicMoment = tick;
