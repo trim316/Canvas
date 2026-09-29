@@ -20,7 +20,9 @@ assert "0.157.0+26.2" in meta["depends"]["fabric-api"]
 
 required_classes = [
     "CanvasMod.class",
-    "CanvasFeelProfile.class",\n    "SeasonPolicy.class",\n    "SeasonalHomeProfile.class",
+    "CanvasFeelProfile.class",
+    "SeasonPolicy.class",
+    "SeasonalHomeProfile.class",
     "CanvasWorldMemoryStore.class",
     "MilestoneZeroScenarioPolicy.class",
     "ObservationBudgetPolicy.class",
@@ -41,7 +43,9 @@ required_classes = [
     "CanvasFamiliarityClient.class",
     "CanvasFeelClient.class",
     "CanvasExperienceDirector.class",
-    "CanvasVillageLifeClient.class",\n    "CanvasSeasonClient.class",\n    "CanvasSeasonObserver.class",
+    "CanvasVillageLifeClient.class",
+    "CanvasSeasonClient.class",
+    "CanvasSeasonObserver.class",
 ]
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required
