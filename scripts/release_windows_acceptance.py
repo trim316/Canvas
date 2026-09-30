@@ -50,6 +50,18 @@ def main() -> None:
                 z.writestr("baseline.bin", f"original-{mid}".encode())
             baseline[mid]=(old.name,sha256(old))
 
+        # Seed the broken public 0.2.0 identity. The hotfix installer must
+        # migrate this exact Canvas runtime without treating arbitrary mods
+        # that use the historical 'canvas' id as ours.
+        legacy = mods/"canvas-0.2.0-rc.1.jar"
+        with zipfile.ZipFile(legacy,"w") as z:
+            z.writestr("fabric.mod.json", json.dumps({
+                "schemaVersion":1,"id":"canvas","version":"0.2.0-rc.1",
+                "name":"Canvas","entrypoints":{"main":["net.canvasmod.CanvasMod"]}
+            }))
+            z.writestr("baseline.bin", b"legacy-canvas-0.2.0")
+        baseline["canvas"]=(legacy.name,sha256(legacy))
+
         invoke(stage/"INSTALL-CANVAS.cmd",appdata,True)
         installed = {}
         for p in mods.glob("*.jar"):
