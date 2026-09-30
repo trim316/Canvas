@@ -24,6 +24,7 @@ final class CanvasExplorationClient {
     private long lastMusicMoment = Long.MIN_VALUE / 4L;
     private PlaceFamiliarityPolicy.Kind previous = PlaceFamiliarityPolicy.Kind.NONE;
     private boolean ciAnnounced;
+    private CanvasExplorationMusic activeMusic;
 
     CanvasExplorationClient(CanvasFeelClient feel, CanvasExperienceDirector director) {
         this.feel = feel;
@@ -39,6 +40,15 @@ final class CanvasExplorationClient {
                 ciAnnounced = true;
             }
         });
+    }
+
+    void resetForWorld() {
+        previous = PlaceFamiliarityPolicy.Kind.NONE;
+        lastMusicMoment = Long.MIN_VALUE / 4L;
+        if (activeMusic != null) {
+            activeMusic.endImmediately();
+            activeMusic = null;
+        }
     }
 
     void accept(PlaceStatePayload payload) {
@@ -63,10 +73,12 @@ final class CanvasExplorationClient {
     }
 
     private void present(PlaceFamiliarityPolicy.Kind kind) {
-        client.getSoundManager().play(new CanvasExplorationMusic(
+        if (activeMusic != null) activeMusic.endImmediately();
+        activeMusic = new CanvasExplorationMusic(
                 ExplorationMusicPolicy.eventFor(kind, true),
                 ExplorationMusicPolicy.volumeFor(kind),
-                ExplorationMusicPolicy.pitchFor(kind)));
+                ExplorationMusicPolicy.pitchFor(kind));
+        client.getSoundManager().play(activeMusic);
     }
 
     private static PlaceFamiliarityPolicy.Kind parse(String raw) {
@@ -90,6 +102,11 @@ final class CanvasExplorationClient {
             this.relative = true;
             this.attenuation = SoundInstance.Attenuation.NONE;
             this.looping = false;
+        }
+
+        void endImmediately() {
+            volume = 0.0f;
+            stop();
         }
 
         @Override
