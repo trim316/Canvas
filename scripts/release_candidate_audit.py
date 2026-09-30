@@ -68,8 +68,8 @@ for command in [
 with zipfile.ZipFile(jar) as runtime:
     names = set(runtime.namelist())
     meta = json.loads(runtime.read("fabric.mod.json"))
-    if meta.get("id") != "canvas":
-        fail("runtime JAR Fabric id is not canvas")
+    if meta.get("id") != "cozycanvas":
+        fail("runtime JAR Fabric id is not cozycanvas")
     if str(meta.get("version")) != version:
         fail(f"runtime JAR version {meta.get('version')!r} != gradle version {version!r}")
     if meta.get("depends", {}).get("minecraft") != "~26.2":
