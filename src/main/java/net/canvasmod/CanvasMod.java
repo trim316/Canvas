@@ -8,15 +8,28 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 
 public final class CanvasMod implements ModInitializer {
     private final CanvasHomeRuntime home = new CanvasHomeRuntime();
+    private final CanvasPlaceRuntime places = new CanvasPlaceRuntime();
 
     @Override
     public void onInitialize() {
         PayloadTypeRegistry.clientboundPlay().register(HomeStatePayload.TYPE, HomeStatePayload.CODEC);
 
-        ServerLifecycleEvents.SERVER_STARTING.register(home::onServerStarting);
-        ServerTickEvents.END_SERVER_TICK.register(home::onServerTick);
-        ServerLifecycleEvents.AFTER_SAVE.register((server, flush, force) -> home.save());
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> home.onServerStopped());
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> {
+            home.onServerStarting(server);
+            places.onServerStarting(server);
+        });
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            home.onServerTick(server);
+            places.onServerTick(server);
+        });
+        ServerLifecycleEvents.AFTER_SAVE.register((server, flush, force) -> {
+            home.save();
+            places.save();
+        });
+        ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
+            home.onServerStopped();
+            places.onServerStopped();
+        });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 home.syncPlayer(handler.getPlayer()));
     }
