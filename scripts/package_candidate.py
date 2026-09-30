@@ -116,7 +116,7 @@ if not exist "%MODS%" (
 >>"%PS1%" echo $incoming = Join-Path $root 'mods'
 >>"%PS1%" echo $manifest = Get-Content (Join-Path $root 'INSTALL-MANIFEST.json') -Raw ^| ConvertFrom-Json
 >>"%PS1%" echo $backupRoot = Join-Path $mods '.canvas-backup'
->>"%PS1%" echo $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+>>"%PS1%" echo $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
 >>"%PS1%" echo $backup = Join-Path $backupRoot $stamp
 >>"%PS1%" echo function Get-ModId([string]$jar) {
 >>"%PS1%" echo   $zip = [IO.Compression.ZipFile]::OpenRead($jar)
