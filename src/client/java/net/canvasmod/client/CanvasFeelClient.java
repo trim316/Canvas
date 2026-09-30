@@ -1,12 +1,15 @@
 package net.canvasmod.client;
 
 import java.util.Locale;
+import java.util.ArrayDeque;
 import net.canvasmod.CanvasFeelProfile;
 import net.canvasmod.CanvasFeatureConfig;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
 import net.canvasmod.HomeStatePayload;
 import net.canvasmod.HomecomingPolicy;
+import net.canvasmod.LongJourneyHomecomingPolicy;
+import net.canvasmod.AmbienceHandoffPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
@@ -48,6 +51,8 @@ final class CanvasFeelClient {
     private int homeY;
     private int homeZ;
     private long awaySince = -1;
+    private double furthestAwaySq;
+    private boolean visitedAnotherDimensionOnTrip;
     private long lastReturnCue = Long.MIN_VALUE / 4;
     private long lastPhaseCue = Long.MIN_VALUE / 4;
     private long lastSurpriseDay = Long.MIN_VALUE / 4;
@@ -55,6 +60,7 @@ final class CanvasFeelClient {
     private long majorMomentDay = Long.MIN_VALUE / 4;
     private int majorMomentsToday;
     private CanvasLoopingSound ambience;
+    private final ArrayDeque<CanvasLoopingSound> fadingAmbiences = new ArrayDeque<>();
     private String ambienceKey = "";
     private boolean atHome;
     private boolean previousRaining;
@@ -76,18 +82,20 @@ final class CanvasFeelClient {
     }
 
     void acceptWorldIdentity(String worldId) {
+        clearAllAmbience();
         hasHome = false;
         atHome = false;
         homeDimension = "";
         homeX = 0;
         homeY = 0;
         homeZ = 0;
-        awaySince = -1;
+        resetJourney();
         accumulator.reset();
         director.setWorldIdentity(worldId);
     }
 
     void acceptServerHome(HomeStatePayload payload) {
+        resetJourney();
         hasHome = true;
         homeDimension = payload.dimension();
         homeX = payload.pos().getX();
@@ -126,7 +134,7 @@ final class CanvasFeelClient {
             atHome = false;
             phase = CanvasFeelProfile.Phase.AWAY;
             previousRaining = false;
-            stopAmbience(30);
+            clearAllAmbience();
             return;
         }
 
@@ -370,35 +378,54 @@ final class CanvasFeelClient {
         return new HomeEvidencePolicy.Evidence(sheltered, beds, storage, work, comfort);
     }
 
+    private void resetJourney() {
+        awaySince = -1;
+        furthestAwaySq = 0.0;
+        visitedAnotherDimensionOnTrip = false;
+    }
+
     private void observeReturn(String dimension) {
         if (!hasHome || client.player == null) return;
 
         if (!homeDimension.equals(dimension)) {
-            if (awaySince < 0) awaySince = tick;
+            if (awaySince < 0) {
+                resetJourney();
+                awaySince = tick;
+            }
+            visitedAnotherDimensionOnTrip = true;
             return;
         }
 
         double distance = distanceSq(
                 client.player.getX(), client.player.getY(), client.player.getZ(),
                 homeX + 0.5, homeY + 0.5, homeZ + 0.5);
-
         if (distance >= AWAY_RADIUS_SQ) {
-            if (awaySince < 0) awaySince = tick;
+            if (awaySince < 0) {
+                resetJourney();
+                awaySince = tick;
+            }
+            furthestAwaySq = Math.max(furthestAwaySq, distance);
             return;
         }
-
         if (atHome && awaySince >= 0) {
-            if (tick - awaySince >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
-                // A suppressed cue is silence, not an earned world-memory event.
-                // Preview before either density gate and persist only after both accept.
-                HomecomingPolicy.Plan plan = director.previewHomecoming();
+            long elapsedAway = Math.max(0L, tick - awaySince);
+            if (elapsedAway >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
+                int previousReturns = director.meaningfulReturns();
+                HomecomingPolicy.Plan preview = LongJourneyHomecomingPolicy.adapt(
+                        director.previewHomecoming(), elapsedAway, furthestAwaySq,
+                        visitedAnotherDimensionOnTrip, previousReturns);
+                // The world should only remember an experience the player actually
+                // receives. Keep the preview and definitive plan on the same
+                // prior-return count so the music density gate stays truthful.
                 if (!allowMajorMoment()) {
-                    awaySince = -1;
+                    resetJourney();
                     return;
                 }
-                boolean music = !plan.musicEvent().isBlank();
+                boolean music = !preview.musicEvent().isBlank();
                 if (director.allowMoment(MomentDensityPolicy.Kind.HOMECOMING, tick, music)) {
-                    plan = director.nextHomecoming();
+                    HomecomingPolicy.Plan plan = LongJourneyHomecomingPolicy.adapt(
+                            director.nextHomecoming(), elapsedAway, furthestAwaySq,
+                            visitedAnotherDimensionOnTrip, previousReturns);
                     homecomingFlavor = plan.flavor();
                     playCue(plan.cueEvent(), plan.cueVolume(), plan.cuePitch());
                     if (music) playMusicMoment(plan.musicEvent(), 0.20f, plan.cuePitch());
@@ -407,7 +434,7 @@ final class CanvasFeelClient {
                     recordMajorMoment();
                 }
             }
-            awaySince = -1;
+            resetJourney();
         }
     }
 
@@ -488,7 +515,25 @@ final class CanvasFeelClient {
     }
 
     private void stopAmbience(int fadeTicks) {
-        if (ambience != null && !ambience.isStopped()) ambience.fadeOut(fadeTicks);
+        fadingAmbiences.removeIf(CanvasLoopingSound::isStopped);
+        if (ambience != null && !ambience.isStopped()) {
+            ambience.fadeOut(fadeTicks);
+            fadingAmbiences.addLast(ambience);
+        }
+        ambience = null;
+        ambienceKey = "";
+        int surplus = AmbienceHandoffPolicy.oldestLoopsToRetire(fadingAmbiences.size());
+        for (int i = 0; i < surplus; i++) {
+            fadingAmbiences.removeFirst().stopImmediately();
+        }
+    }
+
+    private void clearAllAmbience() {
+        if (ambience != null) ambience.stopImmediately();
+        for (CanvasLoopingSound previous : fadingAmbiences) previous.stopImmediately();
+        fadingAmbiences.clear();
+        ambience = null;
+        ambienceKey = "";
     }
 
     private void playCue(String eventPath, float volume, float pitch) {
@@ -573,6 +618,12 @@ final class CanvasFeelClient {
         void fadeOut(int ticks) {
             targetVolume = 0.0f;
             fadeRemaining = Math.max(1, ticks);
+        }
+
+        void stopImmediately() {
+            targetVolume = 0.0f;
+            volume = 0.0f;
+            stop();
         }
 
         @Override
