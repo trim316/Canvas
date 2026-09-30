@@ -3,6 +3,7 @@ package net.canvasmod.client;
 import net.canvasmod.HomeStatePayload;
 import net.canvasmod.PlaceStatePayload;
 import net.canvasmod.LandmarkStatePayload;
+import net.canvasmod.WorldIdentityPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
@@ -15,7 +16,16 @@ public final class CanvasClient implements ClientModInitializer {
         CanvasExplorationWeatherClient explorationWeather =
                 new CanvasExplorationWeatherClient(feel, director);
         CanvasRareWonderClient rareWonder = new CanvasRareWonderClient(feel, director);
+        CanvasFamiliarityClient familiarity = new CanvasFamiliarityClient(feel, director);
 
+        ClientPlayNetworking.registerGlobalReceiver(WorldIdentityPayload.TYPE, (payload, context) ->
+                context.client().execute(() -> {
+                    feel.acceptWorldIdentity(payload.worldId());
+                    familiarity.acceptWorldIdentity(payload.worldId());
+                    if (Boolean.parseBoolean(System.getenv().getOrDefault("CANVAS_VISUAL_TEST", "false"))) {
+                        System.out.println("CANVAS_CI_WORLD_IDENTITY_ACTIVE");
+                    }
+                }));
         ClientPlayNetworking.registerGlobalReceiver(HomeStatePayload.TYPE, (payload, context) ->
                 context.client().execute(() -> feel.acceptServerHome(payload)));
         ClientPlayNetworking.registerGlobalReceiver(PlaceStatePayload.TYPE, (payload, context) ->
@@ -29,7 +39,7 @@ public final class CanvasClient implements ClientModInitializer {
         exploration.register();
         explorationWeather.register();
         rareWonder.register();
-        new CanvasFamiliarityClient(feel, director).register();
+        familiarity.register();
         new CanvasVillageLifeClient(director).register();
         new CanvasSeasonClient(feel, director).register();
         feel.register();
