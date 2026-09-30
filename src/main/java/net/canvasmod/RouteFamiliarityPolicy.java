@@ -44,17 +44,15 @@ public final class RouteFamiliarityPolicy {
         double dx = currentX - previousX;
         double dz = currentZ - previousZ;
         double distanceSq = dx * dx + dz * dz;
-        return distanceSq >= MIN_SAMPLE_DISTANCE_SQ
-                && distanceSq <= MAX_SAMPLE_DISTANCE_SQ
-                && !segmentKey(
-                        currentDimension,
-                        previousX,
-                        previousZ,
-                        currentX,
-                        currentZ).endsWith(
-                                Math.floorDiv((int)Math.floor(currentX), GRID_SIZE)
-                                + "," + Math.floorDiv((int)Math.floor(currentZ), GRID_SIZE)
-                                + ">" + Math.floorDiv((int)Math.floor(currentX), GRID_SIZE)
-                                + "," + Math.floorDiv((int)Math.floor(currentZ), GRID_SIZE));
+
+        int previousCellX = Math.floorDiv((int)Math.floor(previousX), GRID_SIZE);
+        int previousCellZ = Math.floorDiv((int)Math.floor(previousZ), GRID_SIZE);
+        int currentCellX = Math.floorDiv((int)Math.floor(currentX), GRID_SIZE);
+        int currentCellZ = Math.floorDiv((int)Math.floor(currentZ), GRID_SIZE);
+        boolean changedCell = previousCellX != currentCellX || previousCellZ != currentCellZ;
+
+        return changedCell
+                && distanceSq >= MIN_SAMPLE_DISTANCE_SQ
+                && distanceSq <= MAX_SAMPLE_DISTANCE_SQ;
     }
 }
