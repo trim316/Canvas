@@ -24,6 +24,7 @@ final class CanvasSettlementRuntime {
 
     private final CanvasHomeRuntime home;
     private SharedSettlementStore store;
+    private SharedWorldMemoryStore sharedMemory;
     private Path evidenceFile;
     private final Set<String> activeGatherings = new HashSet<>();
     private final Map<String, Long> lastGatheringTick = new HashMap<>();
@@ -40,6 +41,8 @@ final class CanvasSettlementRuntime {
         Path root = server.getWorldPath(LevelResource.ROOT);
         store = new SharedSettlementStore(
                 root.resolve("data").resolve("canvas-settlements-v1.properties"));
+        sharedMemory = new SharedWorldMemoryStore(
+                root.resolve("data").resolve("canvas-shared-memory-v1.properties"));
         evidenceFile = root.resolve("canvas-runtime-evidence").resolve("shared-settlements.log");
         evidence("session_start", "known=" + store.settlements().size());
     }
@@ -51,6 +54,7 @@ final class CanvasSettlementRuntime {
         var candidates = SharedSettlementPolicy.detect(home.recognizedHomes());
         var created = store.reconcile(candidates);
         for (var settlement : created) {
+            sharedMemory.noteSettlement(settlement.id());
             evidence("settlement_recognized",
                     "tick=" + tick
                             + ",id=" + settlement.id()
@@ -97,6 +101,10 @@ final class CanvasSettlementRuntime {
                 if (player != null) ServerPlayNetworking.send(player, payload);
             }
             lastGatheringTick.put(gathering.key(), tick);
+            SharedSettlementStore.Settlement stableSettlement = store.match(settlement);
+            if (stableSettlement != null) {
+                sharedMemory.noteGathering(stableSettlement.id(), tick);
+            }
             evidence("community_gathering",
                     "tick=" + tick
                             + ",participants=" + gathering.participants().size()
@@ -112,6 +120,7 @@ final class CanvasSettlementRuntime {
 
     void save() {
         if (store != null) store.save();
+        if (sharedMemory != null) sharedMemory.save();
     }
 
     void onServerStopped() {
@@ -120,6 +129,7 @@ final class CanvasSettlementRuntime {
             evidence("session_stop", "known=" + store.settlements().size());
         }
         store = null;
+        sharedMemory = null;
         tick = 0L;
     }
 
