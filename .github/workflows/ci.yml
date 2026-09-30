@@ -195,6 +195,7 @@ jobs:
           echo "- explicit low-end block/entity observation and clustering budgets"
           echo "- machine-checked companion compatibility matrix with required/admit-or-quarantine policy"
           echo "- manifest-bound transactional installer, update backup, rollback, and bundle integrity verification"
+          echo "- independent final release-candidate audit with exact runtime/bundle/admission hashes"
           echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"
 
@@ -224,9 +225,22 @@ jobs:
       - name: Verify proven playtest bundle and installer/update path
         run: python3 scripts/verify_bundle.py dist/Canvas-26.2-PROVEN.zip
 
+      - name: Run independent release candidate audit
+        shell: bash
+        run: |
+          ADMISSION="$(find companions -type f -name 'companion-admission.json' | head -n 1)"
+          test -n "$ADMISSION"
+          python3 scripts/release_candidate_audit.py \
+            --jar "$(find candidate -type f -name '*.jar' ! -name '*-sources.jar' | head -n 1)" \
+            --bundle dist/Canvas-26.2-PROVEN.zip \
+            --admission "$ADMISSION" \
+            --receipt dist/RELEASE-AUDIT.json
+
       - name: Upload proven playtest bundle
         uses: actions/upload-artifact@v4
         with:
           name: canvas-26.2-proven-bundle
-          path: dist/Canvas-26.2-PROVEN.zip
+          path: |
+            dist/Canvas-26.2-PROVEN.zip
+            dist/RELEASE-AUDIT.json
           if-no-files-found: error
