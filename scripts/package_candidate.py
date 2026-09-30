@@ -26,6 +26,8 @@ if stage.exists():
     shutil.rmtree(stage)
 mods = stage / "mods"
 mods.mkdir(parents=True)
+evidence = stage / "evidence"
+evidence.mkdir(parents=True)
 
 files = []
 for source in canvas + companions:
@@ -33,17 +35,32 @@ for source in canvas + companions:
     shutil.copy2(source, dest)
     files.append(dest)
 
+matrix = pathlib.Path("compatibility/companion-matrix.json")
+if not matrix.exists():
+    raise SystemExit("checked-in compatibility matrix missing")
+matrix_dest = evidence / "companion-matrix.json"
+shutil.copy2(matrix, matrix_dest)
+files.append(matrix_dest)
+
+reports = list(companions_dir.rglob("companion-admission.json"))
+if len(reports) != 1:
+    raise SystemExit(f"expected exactly one companion admission report, got {reports}")
+report_dest = evidence / "companion-admission.json"
+shutil.copy2(reports[0], report_dest)
+files.append(report_dest)
+
 hash_lines = []
 for path in sorted(files):
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
-    hash_lines.append(f"{digest}  mods/{path.name}")
+    hash_lines.append(f"{digest}  {path.relative_to(stage).as_posix()}")
 (stage / "SHA256SUMS.txt").write_text("\n".join(hash_lines) + "\n", encoding="utf-8")
 
 (stage / "PROVEN.txt").write_text(
     "Canvas Minecraft 26.2 automated candidate\n"
     "This bundle is emitted only after server GameTests, client GameTests,\n"
     "production-client launch, recursive companion-mod resolution, visual-delta\n"
-    "verification, audio-resource verification, and artifact inspection pass.\n",
+    "verification, audio-resource verification, compatibility-matrix admission,\n"
+    "and artifact inspection pass. Exact matrix/admission evidence is included.\n",
     encoding="utf-8",
 )
 
