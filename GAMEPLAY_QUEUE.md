@@ -173,6 +173,49 @@ derive more precise gameplay slices from playtest evidence and the product pilla
 Multiplayer, World Memory). Avoid duplicate work, unsupported mod claims, and
 new build-system development. Implement one cohesive playable change per branch.
 
+
+## P14 — Homestead moments and player-authored places
+
+- [ ] READY G41: Differentiate a *busy workshop* from a resting home using only repeated loaded evidence of vanilla crafting/storage/work blocks around an already-confirmed HOME; reuse existing ambience at restrained volume. Extend HomeEvidencePolicy and CanvasFeelClient; GameTest empty shelter, ordinary home, authored workshop, and unloading mid-observation.
+- [ ] READY G42: Recognize returning to a repeatedly used *home entrance* from the outside, not merely standing within a wide HOME radius. Derive stable arrival from existing home coordinates and movement history; require real departure. GameTest walking past, circling inside, and genuine return.
+- [ ] READY G43: Give a player-authored covered porch a gentle storm-observation presentation if shelter and HOME evidence both persist, without inferring a porch from a naturally sheltered cave. Reuse approved existing weather assets; GameTest roof-only cave, established house, wet-to-sheltered transition.
+- [ ] READY G44: Suppress HOME audio and overlays immediately when the player explicitly leaves the recognized world, including during prolonged loading screens; never bleed old memories into the next server. Extend CanvasClient disconnect/world identity cleanup; client GameTest reconnect to a different world.
+- [ ] READY G45: Let a long-established HOME gradually favor quieter repeat homecoming cues after many actual visits; use capped world-memory history and existing cue variants, no reward inflation. GameTest first, fifth, twentieth, and overflow returns.
+
+## P15 — Vanilla villagers and the sense of community
+
+- [ ] READY G46: Distinguish an active village market period from an ordinary cluster using repeated observation of *loaded* vanilla villagers plus work infrastructure; no trading or villager behavior overrides. Extend VillageLifePolicy/CanvasVillageLifeClient; GameTest fleeting crowd, village workday, and unloaded edge.
+- [ ] READY G47: Introduce a restrained village-after-rain atmosphere only for an established, currently loaded settlement and a real observed storm ending; reuse existing approved ambience. GameTest village storm end vs an unrecognized roadside stop; prove cooldown.
+- [ ] READY G48: Make shared community-gathering presentation responsive to genuine proximity rather than broadcasting equivalent HUD/audio to every connected player. Reuse CommunityGatheringPayload and CanvasCommunityClient; multiplayer GameTest near/far players and dimension boundaries.
+- [ ] READY G49: Prevent a village from constantly feeling 'busy' when the player camps near a stable crowd. Introduce stable-state decay and meaningful change triggers in village presentation, no entity scheduling. GameTest hour-long stable observation vs legitimate new gathering.
+- [ ] READY G50: Mark return to a previously visited vanilla village with a gentle familiarity variation when shared world-memory evidence supports it; distinguish player-authored settlement from a chance encounter. GameTest known/unknown village, fork isolation, and opt-out.
+
+## P16 — Exploration, travel and understated surprises
+
+- [ ] READY G51: Adapt quiet travel ambience during genuine boat travel through a familiar, loaded, player-recognized water route without changing boat speed or sea generation. Use existing RouteFamiliarityTracker and TravelAtmospherePolicy; GameTest boat vs walking and unknown route.
+- [ ] READY G52: Give a mature vanilla minecart route an understated return-home transition as it approaches an established authored destination; never change minecart mechanics or force rails/chunks. GameTest near/far known destination and unloaded rails.
+- [ ] READY G53: Distinguish exploring a known place during clear weather versus after a *naturally observed* rainstorm using existing ExplorationWeatherPolicy cues. GameTest rain-start/recovery timing, unknown location, and disabled weather family.
+- [ ] READY G54: Permit one rare long-session discovery in the End using only directly observed loaded landmarks and existing sound assets, with no generated features and minimal overlays. GameTest no fabricated landmark evidence, rarity limits, dimension transitions.
+- [ ] READY G55: Prevent repeated exploration surprise cues when repeatedly crossing a dimension portal or chunk boundary near the same recognized location. Extend existing exploration surprise/history cooldown; GameTest rapid portal/edge oscillation and genuine later revisit.
+
+## P17 — Pack feel, restraint and long-lived worlds
+
+- [ ] READY G56: Introduce configurable ambient-audio *ducking* when Canvas plays its own short music moment, affecting only Canvas-owned loops (never Minecraft or companion music). Refine CanvasFeelClient/CanvasSeasonClient sound targets; client acceptance overlaps home, storm, and music with smooth recovery.
+- [ ] READY G57: Make HOME recognition messaging unobtrusive in multiplayer where multiple players concurrently establish separate homes. Keep private client-side feedback, no public chat broadcast, and strict world-scope separation. GameTest two simultaneous homes and reconnect.
+- [ ] READY G58: Reduce surprising visual pulses for movement-sensitive players by making pulse strength and duration follow existing client feature settings while preserving the audio-only moment. Client acceptance compares reduced/normal/off and reload persistence.
+- [ ] READY G59: Define an actual low-end dense-village experience budget that prioritizes existing audio/context over cosmetic overlay updates under load, without reducing base Minecraft frame performance. Instrument only Canvas client update work; test bounded work in synthetic high-density snapshots.
+- [ ] READY G60: Complete a full day/night/rain/return-home playable scenario in cloud client GameTests with only approved companion stack: verify audible cue selection, restrained repeated presentation, no missing resources, and no accidental world edits. Preserve machine evidence; separate human FEEL review remains outstanding.
+
+## P14–P17 dispatch notes
+
+G41–G60 are **additional implementation work**, not replacements for G01–G40.
+Dispatch one cohesive feature at a time; use independent gameplay branches while
+other branches validate. Each item must either use an existing sound or wait
+for a separately approved, distributable Canvas-owned audio asset. Do not claim
+that a proposed sound, companion mod, or gameplay behavior already exists. A
+failed gameplay experiment should leave a testable learning and a narrow fix,
+not another infrastructure program. Continue replenishing as READY work drops.
+
 ## Release acceptance still required
 
 Manual Windows Modrinth profile test, long-play FPS/stutter, forever-world
