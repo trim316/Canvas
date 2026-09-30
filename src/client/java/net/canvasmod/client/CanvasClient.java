@@ -23,6 +23,7 @@ public final class CanvasClient implements ClientModInitializer {
         CanvasRareWonderClient rareWonder = new CanvasRareWonderClient(feel, director);
         CanvasFamiliarityClient familiarity = new CanvasFamiliarityClient(feel, director);
         CanvasCommunityClient community = new CanvasCommunityClient(director);
+        CanvasSeasonClient seasons = new CanvasSeasonClient(feel, director);
 
         ClientPlayNetworking.registerGlobalReceiver(WorldIdentityPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
@@ -32,6 +33,7 @@ public final class CanvasClient implements ClientModInitializer {
                     exploration.resetForWorld();
                     explorationWeather.resetForWorld();
                     rareWonder.acceptWorldIdentity(payload.scopeId());
+                    seasons.resetForWorld();
                     if (config.enabled(CanvasFeatureConfig.Family.FAMILIAR_FACES)) {
                         familiarity.acceptWorldIdentity(payload.scopeId());
                     }
@@ -65,7 +67,7 @@ public final class CanvasClient implements ClientModInitializer {
             new CanvasVillageLifeClient(director).register();
         }
         if (config.enabled(CanvasFeatureConfig.Family.SEASONS)) {
-            new CanvasSeasonClient(feel, director).register();
+            seasons.register();
         }
         feel.register();
     }
