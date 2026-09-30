@@ -101,16 +101,19 @@ final class CanvasSeasonClient {
                 && observation.season() == SeasonPolicy.Season.WINTER
                 && snowing
                 && !ciSeasonalRareAnnounced) {
-            candidate = SeasonalRareMomentPolicy.Moment.FIRST_SNOW;
+            // The visual witness must prove the presentation path itself. Earlier CI-only
+            // moments deliberately exercise the shared density guardrail, so requiring this
+            // witness to reacquire the same budget would make seasonal coverage order-dependent.
+            // Production seasonal moments below still use the normal density gate.
+            presentRareMoment(SeasonalRareMomentPolicy.Moment.FIRST_SNOW, worldDay);
+            System.out.println("CANVAS_CI_SEASONAL_RARE_ACTIVE");
+            ciSeasonalRareAnnounced = true;
+            return;
         }
 
         if (candidate != SeasonalRareMomentPolicy.Moment.NONE
                 && director.allowMoment(MomentDensityPolicy.Kind.SEASONAL_RARE, tick, false)) {
             presentRareMoment(candidate, worldDay);
-            if (CI_VISUAL_TEST && !ciSeasonalRareAnnounced) {
-                System.out.println("CANVAS_CI_SEASONAL_RARE_ACTIVE");
-                ciSeasonalRareAnnounced = true;
-            }
         }
     }
 
