@@ -30,6 +30,7 @@ import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
+import net.canvasmod.FamiliarBondPolicy;
 import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomecomingPolicy;
 import net.canvasmod.MomentDensityPolicy;
@@ -1544,6 +1545,42 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.assertTrue(SeasonalHomecomingPolicy.adapt(
                         quiet, SeasonPolicy.Season.WINTER, 3, 3).equals(quiet),
                 "Quiet HOME must remain quiet: no seasonal musical reward without context");
+        context.succeed();
+    }
+
+    @GameTest
+    public void longKnownVanillaMobsEarnGentlerGreetings(GameTestHelper context) {
+        var stranger = FamiliarBondPolicy.greeting(0, false, SeasonPolicy.Season.SUMMER);
+        context.assertTrue(stranger.bond() == FamiliarBondPolicy.Bond.UNKNOWN
+                        && !stranger.showText() && stranger.volume() == 0.0f,
+                "Unknown mobs must not receive fabricated familiarity presentations");
+
+        var newlyFamiliar = FamiliarBondPolicy.greeting(
+                FamiliarityPolicy.REQUIRED_OBSERVATION_TICKS, false, SeasonPolicy.Season.SPRING);
+        context.assertTrue(newlyFamiliar.bond() == FamiliarBondPolicy.Bond.RECOGNIZED
+                        && newlyFamiliar.showText(),
+                "A deliberately observed mob should receive its first familiar greeting");
+
+        var longKnown = FamiliarBondPolicy.greeting(
+                FamiliarBondPolicy.OLD_FRIEND_TICKS, false, SeasonPolicy.Season.WINTER);
+        context.assertTrue(longKnown.bond() == FamiliarBondPolicy.Bond.OLD_FRIEND
+                        && longKnown.showText()
+                        && longKnown.volume() < newlyFamiliar.volume()
+                        && longKnown.pitchMultiplier() < 1.0f,
+                "Old friends should feel quieter and earned, not add loud repeated effects");
+
+        var repeat = FamiliarBondPolicy.greeting(
+                FamiliarBondPolicy.OLD_FRIEND_TICKS, true, SeasonPolicy.Season.WINTER);
+        context.assertFalse(repeat.showText(),
+                "Repeated glances in a session must not repeatedly post chat messages");
+        context.assertTrue(repeat.volume() == longKnown.volume(),
+                "Suppressing repeat text must retain the same low-key musical identity");
+
+        var unknownSeason = FamiliarBondPolicy.greeting(
+                FamiliarBondPolicy.OLD_FRIEND_TICKS, true, SeasonPolicy.Season.UNKNOWN);
+        context.assertTrue(unknownSeason.bond() == FamiliarBondPolicy.Bond.OLD_FRIEND
+                        && unknownSeason.volume() <= 0.28f,
+                "Familiar vanilla mobs must remain recognizable without any season mod");
         context.succeed();
     }
 
