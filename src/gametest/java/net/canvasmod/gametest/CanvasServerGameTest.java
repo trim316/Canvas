@@ -21,6 +21,7 @@ import net.canvasmod.SharedSettlementStore;
 import net.canvasmod.CanvasWorldIdentityStore;
 import net.canvasmod.WorldMemoryScopePolicy;
 import net.canvasmod.SharedGatheringPolicy;
+import net.canvasmod.SharedWorldMemoryStore;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -1200,6 +1201,33 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
 
         context.assertTrue(gathering == null,
                 "Distant members and non-members must not manufacture a shared gathering");
+        context.succeed();
+    }
+
+    @GameTest
+    public void sharedWorldMemoryPersistsObservationsWithoutOverwritingPersonalMemory(GameTestHelper context) throws Exception {
+        var dir = Files.createTempDirectory("canvas-shared-world-memory-test");
+        var file = dir.resolve("shared.properties");
+
+        SharedWorldMemoryStore first = new SharedWorldMemoryStore(file);
+        first.noteSettlement("canvas-settlement-7");
+        first.noteGathering("canvas-settlement-7", 1200L);
+        first.noteGathering("canvas-settlement-7", 2400L);
+
+        SharedWorldMemoryStore reloaded = new SharedWorldMemoryStore(file);
+        var snapshot = reloaded.snapshot("canvas-settlement-7");
+
+        context.assertTrue(snapshot.recognizedSettlements() == 1,
+                "Shared memory should remember the settlement as an observed fact");
+        context.assertTrue(snapshot.communityGatherings() == 2,
+                "Shared gathering history should accumulate rather than replace player memory");
+        context.assertTrue(snapshot.lastGatheringTick() == 2400L,
+                "Latest shared gathering tick must survive reload");
+        context.assertTrue(reloaded.snapshot("unknown").communityGatherings() == 0,
+                "Unknown settlements must remain unknown rather than inheriting another settlement's history");
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
         context.succeed();
     }
 
