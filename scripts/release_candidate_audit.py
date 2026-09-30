@@ -114,6 +114,16 @@ with zipfile.ZipFile(bundle) as proven:
     manifest = json.loads(proven.read("INSTALL-MANIFEST.json"))
     packaged_mods = manifest.get("mods", [])
     packaged_filenames = {entry["filename"] for entry in packaged_mods}
+    physical_mod_filenames = {
+        pathlib.PurePosixPath(name).name
+        for name in names
+        if name.startswith("mods/") and name.lower().endswith(".jar")
+    }
+    if physical_mod_filenames != packaged_filenames:
+        fail(
+            "physical bundled JAR set differs from installer manifest: "
+            f"physical={sorted(physical_mod_filenames)} manifest={sorted(packaged_filenames)}"
+        )
     canvas_entries = [entry for entry in packaged_mods if entry.get("mod_id") == "canvas"]
     if len(canvas_entries) != 1:
         fail(f"expected exactly one Canvas manifest entry, got {len(canvas_entries)}")
