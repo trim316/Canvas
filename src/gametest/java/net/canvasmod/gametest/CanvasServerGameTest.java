@@ -10,6 +10,7 @@ import net.canvasmod.MilestoneZeroScenarioPolicy;
 import net.canvasmod.ObservationBudgetPolicy;
 import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.ExplorationMusicPolicy;
+import net.canvasmod.FamiliarPlaceReturnPolicy;
 import net.canvasmod.ExplorationWeatherPolicy;
 import net.canvasmod.RouteFamiliarityPolicy;
 import net.canvasmod.RouteFamiliarityTracker;
@@ -1812,6 +1813,37 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 "Returning home after observing summer away must not fake a season shift");
         context.assertTrue(transitions.observe(SeasonPolicy.Season.AUTUMN),
                 "A real summer-to-autumn transition after a known observation is valid");
+        context.succeed();
+    }
+
+    @GameTest
+    public void familiarAuthoredPlacesEarnOnlyGenuineQuietReturns(GameTestHelper context) {
+        var policy = new FamiliarPlaceReturnPolicy();
+        var dock = PlaceFamiliarityPolicy.Kind.DOCK;
+        var unknown = PlaceFamiliarityPolicy.Kind.NONE;
+        context.assertFalse(policy.observe(dock, true, 100L),
+                "First observed known dock cannot fabricate a reunion");
+        context.assertFalse(policy.observe(unknown, false, 200L),
+                "Leaving a place is silent");
+        context.assertFalse(policy.observe(dock, true, 400L),
+                "A quick trip around the dock is not a meaningful return");
+        context.assertFalse(policy.observe(unknown, false, 500L),
+                "A real departure has to be observed before a later return");
+        context.assertTrue(policy.observe(dock, true,
+                        500L + FamiliarPlaceReturnPolicy.REQUIRED_AWAY_TICKS),
+                "Known place after two real minutes away earns a gentler musical treatment");
+        context.assertTrue(FamiliarPlaceReturnPolicy.volume(0.17f, true) < 0.17f
+                        && FamiliarPlaceReturnPolicy.pitch(1.07f, true) < 1.07f,
+                "Returning should be softer rather than louder and reuse existing music");
+        context.assertTrue(FamiliarPlaceReturnPolicy.volume(0.17f, false) == 0.17f,
+                "Ordinary first-time visits must preserve existing soundtrack volume");
+        policy.observe(unknown, false, 6000L);
+        context.assertFalse(policy.observe(dock, false, 6000L +
+                        FamiliarPlaceReturnPolicy.REQUIRED_AWAY_TICKS),
+                "Unknown places cannot inherit earned familiar history");
+        policy.reset();
+        context.assertFalse(policy.observe(dock, true, 9000L),
+                "Changing worlds must clear short-lived familiar route presentation");
         context.succeed();
     }
 
