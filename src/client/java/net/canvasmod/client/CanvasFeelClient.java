@@ -7,6 +7,7 @@ import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
 import net.canvasmod.HomeStatePayload;
 import net.canvasmod.HomecomingPolicy;
+import net.canvasmod.LongJourneyHomecomingPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
@@ -48,6 +49,8 @@ final class CanvasFeelClient {
     private int homeY;
     private int homeZ;
     private long awaySince = -1;
+    private double furthestAwaySq;
+    private boolean visitedAnotherDimensionOnTrip;
     private long lastReturnCue = Long.MIN_VALUE / 4;
     private long lastPhaseCue = Long.MIN_VALUE / 4;
     private long lastSurpriseDay = Long.MIN_VALUE / 4;
@@ -82,12 +85,13 @@ final class CanvasFeelClient {
         homeX = 0;
         homeY = 0;
         homeZ = 0;
-        awaySince = -1;
+        resetJourney();
         accumulator.reset();
         director.setWorldIdentity(worldId);
     }
 
     void acceptServerHome(HomeStatePayload payload) {
+        resetJourney();
         hasHome = true;
         homeDimension = payload.dimension();
         homeX = payload.pos().getX();
@@ -370,11 +374,19 @@ final class CanvasFeelClient {
         return new HomeEvidencePolicy.Evidence(sheltered, beds, storage, work, comfort);
     }
 
+    private void resetJourney() {
+        awaySince = -1;
+        furthestAwaySq = 0.0;
+        visitedAnotherDimensionOnTrip = false;
+    }
+
     private void observeReturn(String dimension) {
         if (!hasHome || client.player == null) return;
 
         if (!homeDimension.equals(dimension)) {
+            if (awaySince < 0) resetJourney();
             if (awaySince < 0) awaySince = tick;
+            visitedAnotherDimensionOnTrip = true;
             return;
         }
 
@@ -383,15 +395,23 @@ final class CanvasFeelClient {
                 homeX + 0.5, homeY + 0.5, homeZ + 0.5);
 
         if (distance >= AWAY_RADIUS_SQ) {
-            if (awaySince < 0) awaySince = tick;
+            if (awaySince < 0) {
+                resetJourney();
+                awaySince = tick;
+            }
+            furthestAwaySq = Math.max(furthestAwaySq, distance);
             return;
         }
 
         if (atHome && awaySince >= 0) {
-            if (tick - awaySince >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
-                HomecomingPolicy.Plan plan = director.nextHomecoming();
+            long elapsedAway = Math.max(0L, tick - awaySince);
+            if (elapsedAway >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
+                int previousReturns = director.meaningfulReturns();
+                HomecomingPolicy.Plan plan = LongJourneyHomecomingPolicy.adapt(
+                        director.nextHomecoming(), elapsedAway, furthestAwaySq,
+                        visitedAnotherDimensionOnTrip, previousReturns);
                 if (!allowMajorMoment()) {
-                    awaySince = -1;
+                    resetJourney();
                     return;
                 }
                 homecomingFlavor = plan.flavor();
@@ -401,10 +421,10 @@ final class CanvasFeelClient {
                     if (music) playMusicMoment(plan.musicEvent(), 0.20f, plan.cuePitch());
                     homeTransitionPulseTicks = plan.pulseTicks();
                     lastReturnCue = tick;
-                recordMajorMoment();
+                    recordMajorMoment();
                 }
             }
-            awaySince = -1;
+            resetJourney();
         }
     }
 
