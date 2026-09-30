@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.util.EnumSet;
 import net.canvasmod.CanvasFeelProfile;
+import net.canvasmod.TravelAtmospherePolicy;
 import net.canvasmod.CanvasWorldMemoryStore;
 import net.canvasmod.MilestoneZeroScenarioPolicy;
 import net.canvasmod.ObservationBudgetPolicy;
@@ -1455,6 +1456,47 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.assertTrue(
                 LowEndPerformanceBudgetPolicy.VILLAGE_MAX_CLUSTER_COMPARISONS <= 4096,
                 "Village clustering work must remain hard-bounded");
+        context.succeed();
+    }
+
+    @GameTest
+    public void travellingDimensionsKeepTheirOwnSoundscape(GameTestHelper context) {
+        var dawn = TravelAtmospherePolicy.choose("minecraft:overworld", 1000L, false);
+        context.assertTrue("presence.harbor_air".equals(dawn.event())
+                        && dawn.audible() && dawn.volume() <= 0.03f,
+                "Overworld dawn away from home should be subtle and warm");
+
+        var dusk = TravelAtmospherePolicy.choose("minecraft:overworld", 12000L, false);
+        context.assertTrue("presence.harbor_air".equals(dusk.event())
+                        && dusk.pitch() < dawn.pitch(),
+                "Overworld dusk should have a distinct quieter pitch");
+
+        var shelteredNight = TravelAtmospherePolicy.choose(
+                "minecraft:overworld", 18000L, true);
+        context.assertTrue("presence.void_stillness".equals(shelteredNight.event()),
+                "An Overworld night shelter may have restrained stillness");
+
+        var openDay = TravelAtmospherePolicy.choose("minecraft:overworld", 6000L, false);
+        context.assertFalse(openDay.audible(),
+                "An open daytime Overworld must leave enough silence for vanilla");
+
+        var end = TravelAtmospherePolicy.choose("minecraft:the_end", 1000L, false);
+        context.assertTrue("presence.void_stillness".equals(end.event())
+                        && end.volume() < shelteredNight.volume(),
+                "End travel should have faint dimension-appropriate stillness");
+
+        var nether = TravelAtmospherePolicy.choose("minecraft:the_nether", 1000L, true);
+        context.assertFalse(nether.audible(),
+                "Nether must never borrow Overworld morning or End stillness");
+
+        var modded = TravelAtmospherePolicy.choose("anothermod:dreamscape", 18000L, true);
+        context.assertFalse(modded.audible(),
+                "Unknown dimensions retain companion and vanilla ambience");
+
+        context.assertTrue(
+                TravelAtmospherePolicy.choose("minecraft:overworld", -23000L, false)
+                        .event().equals(dawn.event()),
+                "Time wrap must not alter the Overworld dawn presentation");
         context.succeed();
     }
 
