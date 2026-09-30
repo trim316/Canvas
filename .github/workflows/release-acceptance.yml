@@ -178,15 +178,19 @@ jobs:
           python3 scripts/fetch_companions.py
           python3 scripts/admit_companions.py
           python3 scripts/verify_compatibility_matrix.py ci-evidence/companion-admission.json
-      - name: Launch production client on one CPU
+      - name: Run visual and production clients on one CPU
         env:
           CANVAS_COMPANION_DIR: ci-mods-active
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p ci-evidence/constrained
+          mkdir -p ci-evidence/constrained ci-evidence/client
           START="$(date +%s)"
           set -o pipefail
+          taskset -c 0 gradle runClientGameTest --no-daemon --stacktrace 2>&1 | tee ci-evidence/client/client-gametest-console.log
+          grep -q "CANVAS_CI_VISUAL_ACTIVE" ci-evidence/client/client-gametest-console.log
+          cp build/run/clientGameTest/screenshots/*.png ci-evidence/client/
+          test "$(find ci-evidence/client -maxdepth 1 -name '*.png' | wc -l)" -ge 2
           taskset -c 0 gradle runProductionClientGameTest --no-daemon --stacktrace 2>&1 | tee ci-evidence/constrained/console.log
           END="$(date +%s)"
           ELAPSED="$((END-START))"
@@ -210,6 +214,7 @@ jobs:
           name: exact-release-constrained-client
           path: |
             ci-evidence/constrained/**
+            ci-evidence/client/**
             run/logs/**
           if-no-files-found: ignore
 
