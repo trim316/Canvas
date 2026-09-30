@@ -55,7 +55,7 @@ def main() -> None:
         companions = root / "companions"
         candidate.mkdir()
         companions.mkdir()
-        jar(candidate / "canvas-new.jar", "canvas", "0.2.0-rc.1")
+        jar(candidate / "canvas-new.jar", "cozycanvas", "0.2.1-rc.1")
         jar(companions / "ambient.jar", "ambient_ci_fixture", "1.0")
         jar(companions / "acoustic.jar", "acoustic_ci_fixture", "1.0")
         report = {
