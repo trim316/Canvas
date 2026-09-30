@@ -194,6 +194,7 @@ jobs:
           echo "- save/reload/backup/fork lineage isolation and legacy identity migration"
           echo "- explicit low-end block/entity observation and clustering budgets"
           echo "- machine-checked companion compatibility matrix with required/admit-or-quarantine policy"
+          echo "- manifest-bound transactional installer, update backup, rollback, and bundle integrity verification"
           echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"
 
@@ -219,6 +220,9 @@ jobs:
 
       - name: Build checksum-bound playtest bundle
         run: python3 scripts/package_candidate.py candidate companions dist/Canvas-26.2-PROVEN.zip
+
+      - name: Verify proven playtest bundle and installer/update path
+        run: python3 scripts/verify_bundle.py dist/Canvas-26.2-PROVEN.zip
 
       - name: Upload proven playtest bundle
         uses: actions/upload-artifact@v4
