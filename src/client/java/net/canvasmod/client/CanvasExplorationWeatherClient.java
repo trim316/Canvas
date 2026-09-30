@@ -32,6 +32,7 @@ final class CanvasExplorationWeatherClient {
     private ExplorationWeatherPolicy.Moment presentation = ExplorationWeatherPolicy.Moment.NONE;
     private int presentationTicks;
     private boolean ciAnnounced;
+    private CanvasWeatherCue activeCue;
 
     CanvasExplorationWeatherClient(CanvasFeelClient feel, CanvasExperienceDirector director) {
         this.feel = feel;
@@ -55,6 +56,20 @@ final class CanvasExplorationWeatherClient {
                 (graphics, tickCounter) -> render(graphics));
     }
 
+    void resetForWorld() {
+        place = PlaceFamiliarityPolicy.Kind.NONE;
+        familiar = false;
+        previousRaining = false;
+        previousCandidate = ExplorationWeatherPolicy.Moment.NONE;
+        presentation = ExplorationWeatherPolicy.Moment.NONE;
+        presentationTicks = 0;
+        lastMomentTick = Long.MIN_VALUE / 4L;
+        if (activeCue != null) {
+            activeCue.endImmediately();
+            activeCue = null;
+        }
+    }
+
     void accept(PlaceStatePayload payload) {
         place = parse(payload.kind());
         familiar = payload.isFamiliar();
@@ -63,9 +78,7 @@ final class CanvasExplorationWeatherClient {
 
     private void update() {
         if (client.level == null || client.player == null) {
-            previousRaining = false;
-            previousCandidate = ExplorationWeatherPolicy.Moment.NONE;
-            presentationTicks = 0;
+            resetForWorld();
             return;
         }
         evaluate();
@@ -101,10 +114,12 @@ final class CanvasExplorationWeatherClient {
     private void present(ExplorationWeatherPolicy.Moment moment) {
         String event = ExplorationWeatherPolicy.cueEvent(moment);
         if (event.isBlank()) return;
-        client.getSoundManager().play(new CanvasWeatherCue(
+        if (activeCue != null) activeCue.endImmediately();
+        activeCue = new CanvasWeatherCue(
                 event,
                 ExplorationWeatherPolicy.volume(moment),
-                ExplorationWeatherPolicy.pitch(moment)));
+                ExplorationWeatherPolicy.pitch(moment));
+        client.getSoundManager().play(activeCue);
         presentation = moment;
         presentationTicks = 120;
     }
@@ -138,6 +153,11 @@ final class CanvasExplorationWeatherClient {
             this.pitch = pitch;
             this.relative = true;
             this.attenuation = SoundInstance.Attenuation.NONE;
+        }
+
+        void endImmediately() {
+            volume = 0.0f;
+            stop();
         }
 
         @Override
