@@ -14,6 +14,8 @@ import net.canvasmod.RouteFamiliarityPolicy;
 import net.canvasmod.RouteFamiliarityTracker;
 import net.canvasmod.LandmarkRecognitionPolicy;
 import net.canvasmod.LandmarkFamiliarityTracker;
+import net.canvasmod.RareWonderPolicy;
+import net.canvasmod.ExplorationWonderMemoryStore;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -927,6 +929,104 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.assertTrue(
                 tracker.visits().get(key) == LandmarkRecognitionPolicy.REQUIRED_VISITS,
                 "Restored landmark visits must clamp at the recognition threshold");
+        context.succeed();
+    }
+
+    @GameTest
+    public void rareWonderLibraryRequiresEarnedLandmarksAndQuietWeather(GameTestHelper context) {
+        String viewpoint = "VIEWPOINT|minecraft:overworld|2,10,3";
+        long rareDay = -1L;
+        for (long day = 0; day < 128; day++) {
+            if (RareWonderPolicy.rareDay(viewpoint, day)) {
+                rareDay = day;
+                break;
+            }
+        }
+        context.assertTrue(rareDay >= 0L,
+                "A deterministic landmark should have sparse eligible wonder days");
+
+        context.assertTrue(
+                RareWonderPolicy.classify(
+                        PlaceFamiliarityPolicy.Kind.VIEWPOINT,
+                        true,
+                        false,
+                        false,
+                        false,
+                        12000L,
+                        rareDay,
+                        viewpoint,
+                        99L) == RareWonderPolicy.Moment.HORIZON_GLOW,
+                "A rare clear sunset at an earned viewpoint should be eligible for horizon glow");
+        context.assertTrue(
+                RareWonderPolicy.classify(
+                        PlaceFamiliarityPolicy.Kind.DOCK,
+                        false,
+                        false,
+                        false,
+                        false,
+                        19000L,
+                        rareDay,
+                        "DOCK|minecraft:overworld|1,8,1",
+                        99L) == RareWonderPolicy.Moment.NONE,
+                "Unrecognized landmarks must never trigger rare wonders");
+        context.assertTrue(
+                RareWonderPolicy.classify(
+                        PlaceFamiliarityPolicy.Kind.VIEWPOINT,
+                        true,
+                        false,
+                        true,
+                        false,
+                        12000L,
+                        rareDay,
+                        viewpoint,
+                        99L) == RareWonderPolicy.Moment.NONE,
+                "Rain should suppress the clear-weather wonder library");
+        context.assertTrue(
+                RareWonderPolicy.classify(
+                        PlaceFamiliarityPolicy.Kind.VIEWPOINT,
+                        true,
+                        true,
+                        false,
+                        false,
+                        12000L,
+                        rareDay,
+                        viewpoint,
+                        99L) == RareWonderPolicy.Moment.NONE,
+                "Exploration wonders must not compete inside HOME");
+        context.succeed();
+    }
+
+    @GameTest
+    public void rareWonderDaysRemainSparsePerLandmark(GameTestHelper context) {
+        String key = "FARM|minecraft:overworld|4,8,4";
+        int eligible = 0;
+        for (long day = 0; day < 68; day++) {
+            if (RareWonderPolicy.rareDay(key, day)) eligible++;
+        }
+        context.assertTrue(eligible >= 3 && eligible <= 5,
+                "Rare wonder cadence should remain sparse across 68 Minecraft days: " + eligible);
+        context.succeed();
+    }
+
+    @GameTest
+    public void explorationWonderMemoryPersistsPerLandmarkCooldown(GameTestHelper context) throws Exception {
+        var dir = Files.createTempDirectory("canvas-wonder-memory-test");
+        var file = dir.resolve("wonders.properties");
+        String key = "DOCK|minecraft:overworld|1,8,1";
+
+        ExplorationWonderMemoryStore first = new ExplorationWonderMemoryStore(file);
+        first.note(key, 42L);
+        first.note(key, 43L);
+
+        ExplorationWonderMemoryStore reloaded = new ExplorationWonderMemoryStore(file);
+        var snapshot = reloaded.snapshot(key);
+        context.assertTrue(snapshot.lastWorldDay() == 43L,
+                "Wonder cooldown day must survive reload");
+        context.assertTrue(snapshot.moments() == 2,
+                "Per-landmark wonder history must survive reload");
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
         context.succeed();
     }
 
