@@ -108,6 +108,12 @@ def main() -> None:
            one_shot(6.2, [(110.0,.070),(146.83,.055),(196.0,.040),(293.66,.020)], .11))
     encode(ROOT / "cues/calm_after_storm.ogg",
            one_shot(4.6, [(196.0,.07),(246.94,.06),(311.13,.046),(392.0,.024)], .18))
+    encode(ROOT / "cues/exploration_rain_dock.ogg",
+           one_shot(5.0, [(146.83,.060),(196.0,.046),(246.94,.032),(329.63,.015)], .16))
+    encode(ROOT / "cues/exploration_storm_overlook.ogg",
+           one_shot(5.6, [(98.0,.070),(130.81,.052),(196.0,.030),(293.66,.014)], .13))
+    encode(ROOT / "cues/exploration_field_after_rain.ogg",
+           one_shot(5.0, [(196.0,.055),(246.94,.044),(329.63,.032),(493.88,.014)], .17))
 
     encode(ROOT / "music/coming_home.ogg",
            music_moment(14.0, [(130.81,.075),(164.81,.066),(196.0,.052),(261.63,.028)], .11, .45))

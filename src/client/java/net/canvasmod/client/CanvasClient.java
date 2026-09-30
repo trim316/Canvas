@@ -11,13 +11,19 @@ public final class CanvasClient implements ClientModInitializer {
         CanvasExperienceDirector director = new CanvasExperienceDirector();
         CanvasFeelClient feel = new CanvasFeelClient(director);
         CanvasExplorationClient exploration = new CanvasExplorationClient(feel, director);
+        CanvasExplorationWeatherClient explorationWeather =
+                new CanvasExplorationWeatherClient(feel, director);
 
         ClientPlayNetworking.registerGlobalReceiver(HomeStatePayload.TYPE, (payload, context) ->
                 context.client().execute(() -> feel.acceptServerHome(payload)));
         ClientPlayNetworking.registerGlobalReceiver(PlaceStatePayload.TYPE, (payload, context) ->
-                context.client().execute(() -> exploration.accept(payload)));
+                context.client().execute(() -> {
+                    exploration.accept(payload);
+                    explorationWeather.accept(payload);
+                }));
 
         exploration.register();
+        explorationWeather.register();
         new CanvasFamiliarityClient(feel, director).register();
         new CanvasVillageLifeClient(director).register();
         new CanvasSeasonClient(feel, director).register();

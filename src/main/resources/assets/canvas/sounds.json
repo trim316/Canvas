@@ -140,6 +140,33 @@
       }
     ]
   },
+  "exploration.weather_rain_dock": {
+    "sounds": [
+      {
+        "name": "canvas:cues/exploration_rain_dock",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "exploration.weather_storm_overlook": {
+    "sounds": [
+      {
+        "name": "canvas:cues/exploration_storm_overlook",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "exploration.weather_field_after_rain": {
+    "sounds": [
+      {
+        "name": "canvas:cues/exploration_field_after_rain",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
   "music.exploration_place": {
     "sounds": [
       {

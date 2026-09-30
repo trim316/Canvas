@@ -33,7 +33,7 @@ final class CanvasExplorationClient {
     void register() {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             tick++;
-            if (CI_VISUAL_TEST && tick >= 260L && !ciAnnounced) {
+            if (CI_VISUAL_TEST && tick >= 230L && !ciAnnounced) {
                 present(PlaceFamiliarityPolicy.Kind.VIEWPOINT);
                 System.out.println("CANVAS_CI_EXPLORATION_MUSIC_ACTIVE");
                 ciAnnounced = true;

@@ -58,6 +58,8 @@ required_classes = [
     "PlaceStatePayload.class",
     "ExplorationMusicPolicy.class",
     "CanvasExplorationClient.class",
+    "ExplorationWeatherPolicy.class",
+    "CanvasExplorationWeatherClient.class",
 ]
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required
@@ -84,6 +86,9 @@ required_resources = [
     "assets/canvas/sounds/music/village_wind_down.ogg",
     "assets/canvas/sounds/music/community_gathering.ogg",
     "assets/canvas/sounds/music/exploration_place.ogg",
+    "assets/canvas/sounds/cues/exploration_rain_dock.ogg",
+    "assets/canvas/sounds/cues/exploration_storm_overlook.ogg",
+    "assets/canvas/sounds/cues/exploration_field_after_rain.ogg",
     "assets/canvas/sounds/music/season_home_shift.ogg",
     "assets/canvas/sounds/cues/season_first_snow.ogg",
     "assets/canvas/sounds/cues/season_spring_chorus.ogg",
