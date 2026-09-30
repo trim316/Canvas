@@ -32,6 +32,7 @@ import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomecomingPolicy;
+import net.canvasmod.LongJourneyHomecomingPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
@@ -1544,6 +1545,66 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.assertTrue(SeasonalHomecomingPolicy.adapt(
                         quiet, SeasonPolicy.Season.WINTER, 3, 3).equals(quiet),
                 "Quiet HOME must remain quiet: no seasonal musical reward without context");
+        context.succeed();
+    }
+
+    @GameTest
+    public void genuinelyLongTripsEarnQuietDistinctHomecomings(GameTestHelper context) {
+        var established = HomecomingPolicy.compose(
+                true, VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.CLEAR, 3);
+        long sufficientTime = LongJourneyHomecomingPolicy.MIN_AWAY_TICKS;
+        double farEnough = LongJourneyHomecomingPolicy.MIN_FURTHEST_DISTANCE_SQ;
+
+        context.assertFalse(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime * 3L, 54.0 * 54.0, false),
+                "AFK time near the doorstep cannot pretend to be distant exploration");
+        context.assertFalse(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime - 1, farEnough * 4, true),
+                "Rapid portal hops or a short excursion must retain ordinary homecoming");
+        context.assertTrue(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime, farEnough, false),
+                "Loaded position evidence of a genuine long walk must count");
+        context.assertTrue(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime, 0.0, true),
+                "A sustained journey through another dimension qualifies without overworld distance");
+        context.assertFalse(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime, Double.NaN, false),
+                "Unknown travel distance must never be treated as evidence");
+
+        var ordinary = LongJourneyHomecomingPolicy.adapt(
+                established, sufficientTime * 3, 54.0 * 54.0, false, 3);
+        context.assertTrue(ordinary.equals(established),
+                "Circling the house cannot manufacture a special homecoming");
+
+        var unearned = LongJourneyHomecomingPolicy.adapt(
+                established, sufficientTime, farEnough, false, 0);
+        context.assertTrue(unearned.equals(established),
+                "First-time visitors cannot receive an earned long-term welcome");
+
+        var earned = LongJourneyHomecomingPolicy.adapt(
+                established, sufficientTime, farEnough, false, 3);
+        context.assertTrue(earned.cueEvent().equals(established.cueEvent())
+                        && earned.musicEvent().equals(established.musicEvent()),
+                "A longer journey must reuse existing earned sound assets and music budget");
+        context.assertTrue(earned.cueVolume() < established.cueVolume()
+                        && earned.cuePitch() < established.cuePitch()
+                        && earned.pulseTicks() > established.pulseTicks(),
+                "A genuine long trip receives a softer, slightly longer welcome");
+
+        var quiet = HomecomingPolicy.compose(
+                false, VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.CLEAR, 5);
+        context.assertTrue(LongJourneyHomecomingPolicy.adapt(
+                        quiet, sufficientTime, farEnough, false, 5).equals(quiet),
+                "Unknown, quiet homes should not invent a familiar welcome");
+
+        var storm = HomecomingPolicy.compose(
+                true, VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.THUNDER_SHELTERED, 5);
+        context.assertTrue(LongJourneyHomecomingPolicy.adapt(
+                        storm, sufficientTime, farEnough, false, 5).equals(storm),
+                "Shelter in thunder keeps its existing distinctive storm treatment");
         context.succeed();
     }
 
