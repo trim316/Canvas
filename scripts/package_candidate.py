@@ -176,7 +176,7 @@ if not exist "%MODS%\.canvas-backup" (
 >>"%PS1%" echo Add-Type -AssemblyName System.IO.Compression.FileSystem
 >>"%PS1%" echo $mods = [IO.Path]::GetFullPath('%MODS%')
 >>"%PS1%" echo $backupRoot = Join-Path $mods '.canvas-backup'
->>"%PS1%" echo $backup = Get-ChildItem $backupRoot -Directory ^| Sort-Object Name -Descending ^| Select-Object -First 1
+>>"%PS1%" echo $backup = Get-ChildItem $backupRoot -Directory ^| Where-Object { $_.Name -notlike '*-restored' } ^| Sort-Object Name -Descending ^| Select-Object -First 1
 >>"%PS1%" echo if ($null -eq $backup) { throw 'No Canvas backup snapshot found' }
 >>"%PS1%" echo $manifestPath = Join-Path $backup.FullName 'INSTALL-MANIFEST.json'
 >>"%PS1%" echo if (!(Test-Path $manifestPath)) { throw 'Backup manifest missing' }
