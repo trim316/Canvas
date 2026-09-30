@@ -82,6 +82,7 @@ required_classes = [
     "P3MultiplayerScenarioPolicy.class",
     "CanvasFeatureConfig.class",
     "LongSessionSoakPolicy.class",
+    "LowEndPerformanceBudgetPolicy.class",
 ]
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required
