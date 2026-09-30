@@ -11,6 +11,7 @@ import java.util.Properties;
 import java.util.UUID;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.MomentDensityPolicy;
+import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.SeasonalFamiliarityProfile;
 import net.canvasmod.WorldMemoryScopePolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -68,8 +69,10 @@ final class CanvasFamiliarityClient {
 
         var box = client.player.getBoundingBox().inflate(FamiliarityPolicy.OBSERVATION_RADIUS);
         boolean familiarNearby = false;
+        int processed = 0;
 
         for (Entity entity : client.level.getEntities(client.player, box, e -> e instanceof Mob)) {
+            if (processed++ >= LowEndPerformanceBudgetPolicy.FAMILIARITY_MAX_MOBS_PER_SAMPLE) break;
             if (!(entity instanceof Mob mob) || !mob.isAlive()) continue;
             int observed = familiarity.merge(
                     mob.getUUID(),

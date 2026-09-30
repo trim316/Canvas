@@ -56,7 +56,7 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Disable/reversibility tests. Implemented in alpha.31 with an all-family off/on round-trip that proves persisted personal world memory is unchanged, plus a source invariant that fails CI if any declared feature-family toggle becomes disconnected from its server/client execution path; mark proven after full CI is green.
 - [x] Long-session soak. Implemented in alpha.32 as a deterministic 30-Minecraft-day orchestration soak covering every moment kind, repeated suppression pressure, and hard verification that presentation/music density ceilings never drift; mark proven after full CI is green.
 - [x] Save/reload/backup/fork safety tests. Implemented in alpha.33 with world lineage + branch identity: ordinary reload and same-key backup restore preserve scope, differently keyed forks retain lineage but receive isolated branch scope, and legacy v1 identities migrate forward without losing the world ID; mark proven after full CI is green.
-- [ ] Low-end performance budget.
+- [x] Low-end performance budget. Implemented in alpha.34 with hard ceilings for steady loaded-only block probes, broad client entity-query cadence, familiar-mob candidates, villager candidates, and village clustering comparisons; production hot paths are capped and deterministic CI fails if any ceiling is exceeded; mark proven after full CI is green.
 - [ ] Mod compatibility matrix.
 - [ ] Proven installer/update path.
 - [ ] Release candidate audit.

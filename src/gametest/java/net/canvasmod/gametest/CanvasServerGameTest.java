@@ -25,6 +25,7 @@ import net.canvasmod.SharedWorldMemoryStore;
 import net.canvasmod.P3MultiplayerScenarioPolicy;
 import net.canvasmod.CanvasFeatureConfig;
 import net.canvasmod.LongSessionSoakPolicy;
+import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -1436,6 +1437,24 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                     try { Files.deleteIfExists(path); }
                     catch (java.io.IOException ignored) { }
                 });
+        context.succeed();
+    }
+
+    @GameTest
+    public void lowEndPerformanceBudgetIsExplicitAndBounded(GameTestHelper context) {
+        context.assertTrue(LowEndPerformanceBudgetPolicy.withinBudget(),
+                "Canvas low-end budget must stay within all declared operation-rate ceilings");
+        context.assertTrue(
+                ObservationBudgetPolicy.equivalentBlockProbesPerSecond()
+                        <= ObservationBudgetPolicy.MAX_EQUIVALENT_BLOCK_PROBES_PER_SECOND,
+                "Loaded-only block observation must remain under its low-end probe ceiling");
+        context.assertTrue(
+                LowEndPerformanceBudgetPolicy.broadEntityQueriesPerSecond()
+                        <= LowEndPerformanceBudgetPolicy.MAX_BROAD_ENTITY_QUERIES_PER_SECOND,
+                "Broad client entity queries must remain under the low-end cadence ceiling");
+        context.assertTrue(
+                LowEndPerformanceBudgetPolicy.VILLAGE_MAX_CLUSTER_COMPARISONS <= 4096,
+                "Village clustering work must remain hard-bounded");
         context.succeed();
     }
 

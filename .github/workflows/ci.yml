@@ -186,6 +186,7 @@ jobs:
           echo "- P3 multiplayer scenario campaign: shared settlement, world isolation, gathering, and persisted shared memory"
           echo "- deterministic 30-day long-session density soak"
           echo "- save/reload/backup/fork lineage isolation and legacy identity migration"
+          echo "- explicit low-end block/entity observation and clustering budgets"
           echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"
 

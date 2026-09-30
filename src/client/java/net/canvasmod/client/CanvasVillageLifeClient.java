@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.MomentDensityPolicy;
+import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.SeasonalVillageProfile;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -41,7 +42,7 @@ final class CanvasVillageLifeClient {
     void register() {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             tick++;
-            if (tick % 20L == 0L) update();
+            if (tick % LowEndPerformanceBudgetPolicy.VILLAGE_SAMPLE_INTERVAL_TICKS == 0L) update();
         });
 
         HudElementRegistry.attachElementAfter(
@@ -101,7 +102,10 @@ final class CanvasVillageLifeClient {
         List<Entity> villagers = new ArrayList<>();
         for (Entity entity : client.level.getEntities(client.player, box, e -> e instanceof Mob)) {
             if (!(entity instanceof Mob mob) || !mob.isAlive()) continue;
-            if (mob.getClass().getSimpleName().equals("Villager")) villagers.add(mob);
+            if (mob.getClass().getSimpleName().equals("Villager")) {
+                villagers.add(mob);
+                if (villagers.size() >= LowEndPerformanceBudgetPolicy.VILLAGE_MAX_VILLAGERS_PER_SAMPLE) break;
+            }
         }
         return villagers;
     }
