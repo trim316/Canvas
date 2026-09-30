@@ -48,7 +48,14 @@ def main() -> None:
         mods = appdata / "ModrinthApp" / "profiles" / "Fabulously Optimized" / "mods"
         mods.mkdir(parents=True)
         old = mods / "old-canvas.jar"
-        jar(old, "canvas", "0.1.0-old")
+        with zipfile.ZipFile(old, "w") as z:
+            z.writestr("fabric.mod.json", json.dumps({
+                "schemaVersion": 1,
+                "id": "canvas",
+                "version": "0.2.0-rc.1",
+                "name": "Canvas",
+                "entrypoints": {"main": ["net.canvasmod.CanvasMod"]},
+            }))
         old_digest = hashlib.sha256(old.read_bytes()).hexdigest()
 
         candidate = root / "candidate"
