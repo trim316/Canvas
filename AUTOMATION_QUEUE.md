@@ -39,7 +39,7 @@ This file is the durable queue for the hourly Canvas development automation. The
 ### P2 — Exploration, wonder, and place attachment
 - [x] Place familiarity beyond HOME: paths, docks, farms, viewpoints, gathering spots. Implemented on the P2 branch with loaded-only semantic evidence, repeated recognition, bounded persistent memory, and performance accounting; mark proven after full CI is green.
 - [x] Exploration music/context director. Implemented in alpha.20 with familiar-place transitions, place-specific tone, dedicated cooldowns, and the shared Nothing Happens music budget; mark proven after full CI is green.
-- [ ] Weather + terrain semantic moments.
+- [x] Weather + terrain semantic moments. Implemented in alpha.21 with familiar dock rain, viewpoint thunder, and farm-after-rain interpretation; presentation-only, HOME-suppressed, cooldown-bound, and globally density-limited; mark proven after full CI is green.
 - [ ] Repeated-route familiarity.
 - [ ] Quiet landmark recognition.
 - [ ] Rare wonder library with strong density limits.
