@@ -81,6 +81,7 @@ required_classes = [
     "SharedWorldMemoryStore.class",
     "P3MultiplayerScenarioPolicy.class",
     "CanvasFeatureConfig.class",
+    "LongSessionSoakPolicy.class",
 ]
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required
