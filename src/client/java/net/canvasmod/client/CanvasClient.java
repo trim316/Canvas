@@ -27,6 +27,11 @@ public final class CanvasClient implements ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(WorldIdentityPayload.TYPE, (payload, context) ->
                 context.client().execute(() -> {
                     feel.acceptWorldIdentity(payload.scopeId());
+                    // A branch/server switch must never replay the prior world's
+                    // exploration music, weather cue or landmark memory.
+                    exploration.resetForWorld();
+                    explorationWeather.resetForWorld();
+                    rareWonder.acceptWorldIdentity(payload.scopeId());
                     if (config.enabled(CanvasFeatureConfig.Family.FAMILIAR_FACES)) {
                         familiarity.acceptWorldIdentity(payload.scopeId());
                     }
