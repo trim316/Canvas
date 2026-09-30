@@ -48,7 +48,7 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Shared settlement recognition. Implemented in alpha.25 by clustering durable semantic HOME anchors across players, assigning stable persisted settlement IDs, and requiring no additional world scans; mark proven after full CI is green.
 - [x] Multiplayer-safe familiar faces and place memory. Implemented in alpha.26 with stable per-world identity, fail-closed client binding, world-namespaced familiar-mob/HOME/season memory, and runtime packet evidence; mark proven after full CI is green.
 - [x] Community gathering interpretation. Implemented in alpha.27 from recognized settlement membership plus live player co-location only, with transition/cooldown gating, shared music density limits, and real client presentation evidence; mark proven after full CI is green.
-- [ ] Shared but non-authoritative world memories.
+- [x] Shared but non-authoritative world memories. Implemented in alpha.28 as settlement-scoped observational history for recognized settlements and community gatherings; it never replaces personal memory, names places, assigns ownership, or drives quests; mark proven after full CI is green.
 - [ ] Multiplayer evidence campaign.
 
 ### P4 — Release hardening
