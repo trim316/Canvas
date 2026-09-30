@@ -12,6 +12,7 @@ import java.util.UUID;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.SeasonalFamiliarityProfile;
+import net.canvasmod.WorldMemoryScopePolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
@@ -32,6 +33,7 @@ final class CanvasFamiliarityClient {
     private final Path stateFile = FabricLoader.getInstance().getConfigDir()
             .resolve("canvas-familiarity-v1.properties");
     private long tick;
+    private String worldIdentity = "";
 
     CanvasFamiliarityClient(CanvasFeelClient feel, CanvasExperienceDirector director) {
         this.feel = feel;
@@ -39,7 +41,6 @@ final class CanvasFamiliarityClient {
     }
 
     void register() {
-        load();
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             tick++;
             if (tick % FamiliarityPolicy.SAMPLE_INTERVAL_TICKS == 0) sample(client);
@@ -48,8 +49,19 @@ final class CanvasFamiliarityClient {
         });
     }
 
+    void acceptWorldIdentity(String worldId) {
+        String next = worldId == null ? "" : worldId.trim();
+        if (next.equals(worldIdentity)) return;
+        if (!worldIdentity.isBlank()) save();
+        worldIdentity = next;
+        familiarity.clear();
+        lastCue.clear();
+        director.setFamiliarNearby(false);
+        if (!worldIdentity.isBlank()) load();
+    }
+
     private void sample(Minecraft client) {
-        if (client.level == null || client.player == null) {
+        if (worldIdentity.isBlank() || client.level == null || client.player == null) {
             director.setFamiliarNearby(false);
             return;
         }
@@ -106,7 +118,7 @@ final class CanvasFamiliarityClient {
     }
 
     private void load() {
-        if (!Files.exists(stateFile)) return;
+        if (worldIdentity.isBlank() || !Files.exists(stateFile)) return;
         Properties properties = new Properties();
         try (var in = Files.newInputStream(stateFile)) {
             properties.load(in);
@@ -114,9 +126,10 @@ final class CanvasFamiliarityClient {
             return;
         }
 
+        String prefix = WorldMemoryScopePolicy.mobPrefix(worldIdentity);
         for (String key : properties.stringPropertyNames()) {
-            if (!key.startsWith("mob.") || !key.endsWith(".ticks")) continue;
-            String rawId = key.substring("mob.".length(), key.length() - ".ticks".length());
+            if (!key.startsWith(prefix) || !key.endsWith(".ticks")) continue;
+            String rawId = key.substring(prefix.length(), key.length() - ".ticks".length());
             try {
                 UUID id = UUID.fromString(rawId);
                 int observed = Integer.parseInt(properties.getProperty(key, "0"));
@@ -127,16 +140,30 @@ final class CanvasFamiliarityClient {
     }
 
     private void save() {
+        if (worldIdentity.isBlank()) return;
         Properties properties = new Properties();
+        if (Files.exists(stateFile)) {
+            try (var in = Files.newInputStream(stateFile)) {
+                properties.load(in);
+            } catch (IOException ignored) { }
+        }
+
+        String prefix = WorldMemoryScopePolicy.mobPrefix(worldIdentity);
+        properties.stringPropertyNames().stream()
+                .filter(key -> key.startsWith(prefix))
+                .toList()
+                .forEach(properties::remove);
         for (var entry : familiarity.entrySet()) {
-            properties.setProperty("mob." + entry.getKey() + ".ticks", Integer.toString(entry.getValue()));
+            properties.setProperty(
+                    prefix + entry.getKey() + ".ticks",
+                    Integer.toString(entry.getValue()));
         }
 
         try {
             Files.createDirectories(stateFile.getParent());
             Path tmp = stateFile.resolveSibling(stateFile.getFileName() + ".tmp");
             try (var out = Files.newOutputStream(tmp)) {
-                properties.store(out, "Canvas persistent all-mob familiarity");
+                properties.store(out, "Canvas persistent world-scoped all-mob familiarity");
             }
             try {
                 Files.move(tmp, stateFile,
