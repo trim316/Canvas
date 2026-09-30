@@ -26,10 +26,14 @@ for root in roots:
             if pattern in text:
                 violations.append(f"{path}: possible forced chunk-load pattern {pattern}")
 
-detector = Path("src/main/java/net/canvasmod/HomeEvidenceDetector.java").read_text(
-    encoding="utf-8", errors="replace")
-if ".getChunkNow(" not in detector:
-    violations.append("HomeEvidenceDetector must remain loaded-only via getChunkNow")
+detectors = [
+    ("HomeEvidenceDetector", Path("src/main/java/net/canvasmod/HomeEvidenceDetector.java")),
+    ("PlaceEvidenceDetector", Path("src/main/java/net/canvasmod/PlaceEvidenceDetector.java")),
+]
+for name, path in detectors:
+    detector = path.read_text(encoding="utf-8", errors="replace")
+    if ".getChunkNow(" not in detector:
+        violations.append(f"{name} must remain loaded-only via getChunkNow")
 
 if violations:
     raise SystemExit("Canvas invariant verification FAILED:\n" + "\n".join(violations))
@@ -37,4 +41,4 @@ if violations:
 print("Canvas invariant verification: PASS")
 print("- no production block/world mutation calls found")
 print("- no production forced chunk-load calls found")
-print("- HomeEvidenceDetector remains getChunkNow loaded-only")
+print("- HOME and place detectors remain getChunkNow loaded-only")
