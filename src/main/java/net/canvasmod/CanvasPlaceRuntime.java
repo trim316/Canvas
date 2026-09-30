@@ -1,0 +1,211 @@
+package net.canvasmod;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.storage.LevelResource;
+
+final class CanvasPlaceRuntime {
+    private static final int SAMPLE_INTERVAL = 100;
+    private static final int MAX_PLACES_PER_PLAYER = 96;
+
+    private final Map<UUID, State> states = new HashMap<>();
+    private Path file;
+    private Path evidenceFile;
+    private long tick;
+
+    void onServerStarting(MinecraftServer server) {
+        states.clear();
+        tick = 0;
+        Path root = server.getWorldPath(LevelResource.ROOT);
+        file = root.resolve("data").resolve("canvas-places-v1.properties");
+        evidenceFile = root.resolve("canvas-runtime-evidence").resolve("place-familiarity.log");
+        load();
+        evidence("session_start", "-", "place_schema=v1");
+    }
+
+    void onServerTick(MinecraftServer server) {
+        tick++;
+        if (tick % SAMPLE_INTERVAL != 0) return;
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) observe(player);
+    }
+
+    void onServerStopped() {
+        save();
+        evidence("session_stop", "-", "players=" + states.size());
+        states.clear();
+        tick = 0;
+    }
+
+    private void observe(ServerPlayer player) {
+        ServerLevel level = player.level();
+        BlockPos center = player.blockPosition();
+        if (level.getChunkSource().getChunkNow(center.getX() >> 4, center.getZ() >> 4) == null) return;
+
+        State state = states.computeIfAbsent(player.getUUID(), ignored -> new State());
+        PlaceFamiliarityPolicy.Evidence placeEvidence = PlaceEvidenceDetector.scan(level, center);
+        PlaceFamiliarityPolicy.Kind kind = placeEvidence.classify();
+        String dimension = level.dimension().identifier().toString();
+
+        boolean recognized = state.accumulator.observe(
+                kind,
+                dimension,
+                player.getX(),
+                player.getY(),
+                player.getZ(),
+                PlaceFamiliarityPolicy.REQUIRED_GOOD_SAMPLES);
+
+        if (kind != PlaceFamiliarityPolicy.Kind.NONE && state.accumulator.goodSamples() == 1) {
+            evidence("place_candidate", player.getUUID().toString(),
+                    "tick=" + tick + "," + placeEvidence.summary());
+        }
+
+        if (!recognized) return;
+
+        double x = state.accumulator.x();
+        double y = state.accumulator.y();
+        double z = state.accumulator.z();
+
+        if (alreadyKnown(state.places, kind, dimension, x, y, z)) {
+            state.accumulator.reset();
+            return;
+        }
+        if (state.places.size() >= MAX_PLACES_PER_PLAYER) {
+            evidence("place_memory_full", player.getUUID().toString(),
+                    "tick=" + tick + ",limit=" + MAX_PLACES_PER_PLAYER);
+            state.accumulator.reset();
+            return;
+        }
+
+        state.places.add(new PlaceMemory(kind, dimension, x, y, z));
+        evidence("place_recognized", player.getUUID().toString(),
+                "tick=" + tick + "," + placeEvidence.summary()
+                        + ",x=" + Math.round(x)
+                        + ",y=" + Math.round(y)
+                        + ",z=" + Math.round(z));
+        state.accumulator.reset();
+        save();
+    }
+
+    private static boolean alreadyKnown(
+            List<PlaceMemory> places,
+            PlaceFamiliarityPolicy.Kind kind,
+            String dimension,
+            double x,
+            double y,
+            double z) {
+        for (PlaceMemory place : places) {
+            if (PlaceFamiliarityPolicy.samePlace(
+                    place.kind(), place.dimension(), place.x(), place.y(), place.z(),
+                    kind, dimension, x, y, z,
+                    PlaceFamiliarityPolicy.DUPLICATE_RADIUS_SQ)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void save() {
+        if (file == null) return;
+        Properties properties = new Properties();
+        for (var entry : states.entrySet()) {
+            String prefix = entry.getKey().toString();
+            List<PlaceMemory> places = entry.getValue().places;
+            properties.setProperty(prefix + ".count", Integer.toString(places.size()));
+            for (int i = 0; i < places.size(); i++) {
+                PlaceMemory place = places.get(i);
+                String key = prefix + ".place." + i + ".";
+                properties.setProperty(key + "kind", place.kind().name());
+                properties.setProperty(key + "dimension", place.dimension());
+                properties.setProperty(key + "x", Double.toString(place.x()));
+                properties.setProperty(key + "y", Double.toString(place.y()));
+                properties.setProperty(key + "z", Double.toString(place.z()));
+            }
+        }
+
+        try {
+            Files.createDirectories(file.getParent());
+            Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
+            try (var out = Files.newOutputStream(tmp)) {
+                properties.store(out, "Canvas familiar places v1");
+            }
+            try {
+                Files.move(tmp, file,
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            } catch (java.nio.file.AtomicMoveNotSupportedException ignored) {
+                Files.move(tmp, file, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException ignored) { }
+    }
+
+    private void load() {
+        if (file == null || !Files.exists(file)) return;
+        Properties properties = new Properties();
+        try (var in = Files.newInputStream(file)) {
+            properties.load(in);
+        } catch (IOException ignored) {
+            return;
+        }
+
+        for (String key : properties.stringPropertyNames()) {
+            if (!key.endsWith(".count")) continue;
+            String prefix = key.substring(0, key.length() - ".count".length());
+            try {
+                UUID id = UUID.fromString(prefix);
+                int count = Math.min(
+                        MAX_PLACES_PER_PLAYER,
+                        Math.max(0, Integer.parseInt(properties.getProperty(key, "0"))));
+                State state = states.computeIfAbsent(id, ignored -> new State());
+                for (int i = 0; i < count; i++) {
+                    String placeKey = prefix + ".place." + i + ".";
+                    PlaceFamiliarityPolicy.Kind kind = PlaceFamiliarityPolicy.Kind.valueOf(
+                            properties.getProperty(placeKey + "kind", "NONE"));
+                    String dimension = properties.getProperty(placeKey + "dimension", "");
+                    double x = Double.parseDouble(properties.getProperty(placeKey + "x", "0"));
+                    double y = Double.parseDouble(properties.getProperty(placeKey + "y", "64"));
+                    double z = Double.parseDouble(properties.getProperty(placeKey + "z", "0"));
+                    if (kind != PlaceFamiliarityPolicy.Kind.NONE && !dimension.isBlank()) {
+                        state.places.add(new PlaceMemory(kind, dimension, x, y, z));
+                    }
+                }
+            } catch (IllegalArgumentException ignored) { }
+        }
+    }
+
+    private void evidence(String type, String player, String detail) {
+        if (evidenceFile == null) return;
+        String line = Instant.now() + " type=" + type + " player=" + player + " " + detail
+                + System.lineSeparator();
+        try {
+            Files.createDirectories(evidenceFile.getParent());
+            Files.writeString(evidenceFile, line, StandardCharsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (IOException ignored) { }
+    }
+
+    private record PlaceMemory(
+            PlaceFamiliarityPolicy.Kind kind,
+            String dimension,
+            double x,
+            double y,
+            double z) { }
+
+    private static final class State {
+        final PlaceRecognitionAccumulator accumulator = new PlaceRecognitionAccumulator();
+        final List<PlaceMemory> places = new ArrayList<>();
+    }
+}
