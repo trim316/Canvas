@@ -6,15 +6,27 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 
 final class CanvasSettlementRuntime {
     private static final int SAMPLE_INTERVAL = 100;
+    private static final long GATHERING_COOLDOWN_TICKS = 20L * 60L * 5L;
 
     private final CanvasHomeRuntime home;
     private SharedSettlementStore store;
     private Path evidenceFile;
+    private final Set<String> activeGatherings = new HashSet<>();
+    private final Map<String, Long> lastGatheringTick = new HashMap<>();
     private long tick;
 
     CanvasSettlementRuntime(CanvasHomeRuntime home) {
@@ -23,6 +35,8 @@ final class CanvasSettlementRuntime {
 
     void onServerStarting(MinecraftServer server) {
         tick = 0L;
+        activeGatherings.clear();
+        lastGatheringTick.clear();
         Path root = server.getWorldPath(LevelResource.ROOT);
         store = new SharedSettlementStore(
                 root.resolve("data").resolve("canvas-settlements-v1.properties"));
@@ -46,6 +60,54 @@ final class CanvasSettlementRuntime {
                             + ",y=" + Math.round(settlement.y())
                             + ",z=" + Math.round(settlement.z()));
         }
+        observeGatherings(server, candidates);
+    }
+
+    private void observeGatherings(
+            MinecraftServer server,
+            List<SharedSettlementPolicy.Candidate> settlements) {
+        List<SharedGatheringPolicy.PlayerPresence> online = new ArrayList<>();
+        Map<UUID, ServerPlayer> players = new HashMap<>();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            UUID id = player.getUUID();
+            players.put(id, player);
+            online.add(new SharedGatheringPolicy.PlayerPresence(
+                    id,
+                    player.level().dimension().identifier().toString(),
+                    player.getX(),
+                    player.getY(),
+                    player.getZ()));
+        }
+
+        Set<String> nowActive = new HashSet<>();
+        for (SharedSettlementPolicy.Candidate settlement : settlements) {
+            SharedGatheringPolicy.Gathering gathering =
+                    SharedGatheringPolicy.detect(settlement, online);
+            if (gathering == null) continue;
+            nowActive.add(gathering.key());
+            if (activeGatherings.contains(gathering.key())) continue;
+
+            long previous = lastGatheringTick.getOrDefault(gathering.key(), Long.MIN_VALUE / 4L);
+            if (tick - previous < GATHERING_COOLDOWN_TICKS) continue;
+
+            CommunityGatheringPayload payload =
+                    new CommunityGatheringPayload(gathering.participants().size());
+            for (UUID participant : gathering.participants()) {
+                ServerPlayer player = players.get(participant);
+                if (player != null) ServerPlayNetworking.send(player, payload);
+            }
+            lastGatheringTick.put(gathering.key(), tick);
+            evidence("community_gathering",
+                    "tick=" + tick
+                            + ",participants=" + gathering.participants().size()
+                            + ",dimension=" + gathering.dimension()
+                            + ",x=" + Math.round(gathering.x())
+                            + ",y=" + Math.round(gathering.y())
+                            + ",z=" + Math.round(gathering.z()));
+        }
+
+        activeGatherings.clear();
+        activeGatherings.addAll(nowActive);
     }
 
     void save() {
