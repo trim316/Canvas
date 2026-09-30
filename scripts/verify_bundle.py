@@ -83,7 +83,7 @@ with zipfile.ZipFile(bundle) as z:
     for needle in ["Get-FileHash -Algorithm SHA256", ".canvas-backup", "Move-Item -Force", "INSTALL-MANIFEST.json"]:
         if needle not in install:
             raise SystemExit(f"installer missing transactional safeguard: {needle}")
-    for needle in [".canvas-backup", "INSTALL-MANIFEST.json", "Canvas backup restored"]:
+    for needle in [".canvas-backup", "INSTALL-MANIFEST.json", "Canvas backup restored", "-notlike '*-restored'"]:
         if needle not in restore:
             raise SystemExit(f"restore path missing safeguard: {needle}")
 
