@@ -80,6 +80,7 @@ required_classes = [
     "CanvasCommunityClient.class",
     "SharedWorldMemoryStore.class",
     "P3MultiplayerScenarioPolicy.class",
+    "CanvasFeatureConfig.class",
 ]
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required
