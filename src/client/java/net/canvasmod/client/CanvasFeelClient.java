@@ -73,6 +73,18 @@ final class CanvasFeelClient {
         this.director = director;
     }
 
+    void acceptWorldIdentity(String worldId) {
+        hasHome = false;
+        atHome = false;
+        homeDimension = "";
+        homeX = 0;
+        homeY = 0;
+        homeZ = 0;
+        awaySince = -1;
+        accumulator.reset();
+        director.setWorldIdentity(worldId);
+    }
+
     void acceptServerHome(HomeStatePayload payload) {
         hasHome = true;
         homeDimension = payload.dimension();
