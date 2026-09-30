@@ -5,6 +5,7 @@ import net.canvasmod.HomecomingPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
+import net.canvasmod.WorldMemoryScopePolicy;
 import net.fabricmc.loader.api.FabricLoader;
 
 final class CanvasExperienceDirector {
@@ -14,14 +15,35 @@ final class CanvasExperienceDirector {
     private final net.canvasmod.CanvasSeasonMemoryStore seasonMemory = new net.canvasmod.CanvasSeasonMemoryStore(
             FabricLoader.getInstance().getConfigDir().resolve("canvas-season-memory-v1.properties"));
     private boolean memoryBound;
+    private String worldIdentity = "";
+    private String pendingHomeDimension = "";
+    private int pendingHomeX;
+    private int pendingHomeY;
+    private int pendingHomeZ;
     private VillageLifePolicy.Rhythm villageRhythm = VillageLifePolicy.Rhythm.NONE;
     private WeatherCharacterPolicy.Character weatherCharacter = WeatherCharacterPolicy.Character.CLEAR;
     private boolean familiarNearby;
     private net.canvasmod.SeasonPolicy.Season season = net.canvasmod.SeasonPolicy.Season.UNKNOWN;
     private boolean ciGuardrailAnnounced;
 
+    void setWorldIdentity(String worldId) {
+        worldIdentity = worldId == null ? "" : worldId.trim();
+        memoryBound = false;
+        if (!worldIdentity.isBlank() && !pendingHomeDimension.isBlank()) bindPendingHome();
+    }
+
     void bindHome(String dimension, int x, int y, int z) {
-        String scope = dimension + "|" + x + "|" + y + "|" + z;
+        pendingHomeDimension = dimension == null ? "" : dimension;
+        pendingHomeX = x;
+        pendingHomeY = y;
+        pendingHomeZ = z;
+        if (!worldIdentity.isBlank()) bindPendingHome();
+    }
+
+    private void bindPendingHome() {
+        String local = pendingHomeDimension + "|" + pendingHomeX + "|" + pendingHomeY + "|" + pendingHomeZ;
+        String scope = WorldMemoryScopePolicy.scope(worldIdentity, local);
+        if (scope.isBlank()) return;
         worldMemory.bind(scope);
         seasonMemory.bind(scope);
         memoryBound = true;
