@@ -9,6 +9,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 public final class CanvasMod implements ModInitializer {
     private final CanvasHomeRuntime home = new CanvasHomeRuntime();
     private final CanvasPlaceRuntime places = new CanvasPlaceRuntime();
+    private final CanvasSettlementRuntime settlements = new CanvasSettlementRuntime(home);
 
     @Override
     public void onInitialize() {
@@ -19,18 +20,22 @@ public final class CanvasMod implements ModInitializer {
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
             home.onServerStarting(server);
             places.onServerStarting(server);
+            settlements.onServerStarting(server);
         });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             home.onServerTick(server);
             places.onServerTick(server);
+            settlements.onServerTick(server);
         });
         ServerLifecycleEvents.AFTER_SAVE.register((server, flush, force) -> {
             home.save();
             places.save();
+            settlements.save();
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             home.onServerStopped();
             places.onServerStopped();
+            settlements.onServerStopped();
         });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 home.syncPlayer(handler.getPlayer()));

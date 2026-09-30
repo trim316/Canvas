@@ -68,6 +68,9 @@ required_classes = [
     "RareWonderPolicy.class",
     "ExplorationWonderMemoryStore.class",
     "CanvasRareWonderClient.class",
+    "SharedSettlementPolicy.class",
+    "SharedSettlementStore.class",
+    "CanvasSettlementRuntime.class",
 ]
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required

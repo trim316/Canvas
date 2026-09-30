@@ -6,7 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
@@ -103,6 +105,21 @@ final class CanvasHomeRuntime {
                 state.homeDimension,
                 new BlockPos(state.homeX, state.homeY, state.homeZ),
                 state.homeScore));
+    }
+
+    List<SharedSettlementPolicy.HomeAnchor> recognizedHomes() {
+        List<SharedSettlementPolicy.HomeAnchor> result = new ArrayList<>();
+        for (var entry : states.entrySet()) {
+            State state = entry.getValue();
+            if (state.homeDimension == null) continue;
+            result.add(new SharedSettlementPolicy.HomeAnchor(
+                    entry.getKey(),
+                    state.homeDimension,
+                    state.homeX + 0.5,
+                    state.homeY + 0.5,
+                    state.homeZ + 0.5));
+        }
+        return List.copyOf(result);
     }
 
     void save() {
