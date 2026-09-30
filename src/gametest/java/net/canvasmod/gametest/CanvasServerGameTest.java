@@ -28,6 +28,7 @@ import net.canvasmod.CanvasFeatureConfig;
 import net.canvasmod.LongSessionSoakPolicy;
 import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.VillageLifePolicy;
+import net.canvasmod.VillageAfterRainPolicy;
 import net.canvasmod.VillageContinuityPolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -1741,6 +1742,48 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.assertTrue(LongJourneyHomecomingPolicy.adapt(
                         storm, sufficientTime, farEnough, false, 5).equals(storm),
                 "Shelter in thunder keeps its existing distinctive storm treatment");
+        context.succeed();
+    }
+
+    @GameTest
+    public void villagesFeelNewAfterActualSustainedRain(GameTestHelper context) {
+        VillageAfterRainPolicy isolated = new VillageAfterRainPolicy();
+        context.assertFalse(isolated.observe(true, VillageLifePolicy.Rhythm.NONE, 100),
+                "Rain outside an actual loaded village is not a village memory");
+        context.assertFalse(isolated.observe(false, VillageLifePolicy.Rhythm.ACTIVE, 140),
+                "Simply arriving as rain ends cannot fabricate sustained village history");
+
+        VillageAfterRainPolicy village = new VillageAfterRainPolicy();
+        context.assertFalse(village.observe(true, VillageLifePolicy.Rhythm.ACTIVE, 100),
+                "A first rainy village sample is observation, not a surprise");
+        context.assertFalse(village.observe(true, VillageLifePolicy.Rhythm.ACTIVE, 140),
+                "Two rainy samples are insufficient");
+        context.assertFalse(village.observe(true, VillageLifePolicy.Rhythm.ACTIVE, 180),
+                "The rain must actually stop before an event is eligible");
+        context.assertTrue(village.observe(false, VillageLifePolicy.Rhythm.ACTIVE, 220),
+                "A real village observed during rain and clearing earns a restrained cue");
+        context.assertFalse(village.observe(false, VillageLifePolicy.Rhythm.ACTIVE, 260),
+                "Stable dry weather must not replay the same transition");
+        context.assertFalse(village.observe(true, VillageLifePolicy.Rhythm.ACTIVE, 300),
+                "Further rain starts never trigger an after-rain cue");
+        context.assertFalse(village.observe(true, VillageLifePolicy.Rhythm.ACTIVE, 340),
+                "A second storm still needs sustained evidence");
+        context.assertFalse(village.observe(true, VillageLifePolicy.Rhythm.ACTIVE, 380),
+                "Rain itself must stay silent");
+        context.assertFalse(village.observe(false, VillageLifePolicy.Rhythm.ACTIVE, 420),
+                "Second storm within cooldown cannot spam village atmosphere");
+        village.reset();
+        context.assertFalse(village.observe(false, VillageLifePolicy.Rhythm.ACTIVE, 500),
+                "Changing worlds cannot leak rain history into another village");
+
+        VillageAfterRainPolicy departed = new VillageAfterRainPolicy();
+        departed.observe(true, VillageLifePolicy.Rhythm.ACTIVE, 100);
+        departed.observe(true, VillageLifePolicy.Rhythm.ACTIVE, 140);
+        departed.observe(true, VillageLifePolicy.Rhythm.ACTIVE, 180);
+        context.assertFalse(departed.observe(true, VillageLifePolicy.Rhythm.NONE, 220),
+                "Leaving loaded village range must clear its rainy evidence");
+        context.assertFalse(departed.observe(false, VillageLifePolicy.Rhythm.ACTIVE, 260),
+                "Returning after rain ended cannot fabricate an observed clearing");
         context.succeed();
     }
 
