@@ -62,6 +62,8 @@ required_classes = [
     "CanvasExplorationWeatherClient.class",
     "RouteFamiliarityPolicy.class",
     "RouteFamiliarityTracker.class",
+    "LandmarkRecognitionPolicy.class",
+    "LandmarkFamiliarityTracker.class",
 ]
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required
