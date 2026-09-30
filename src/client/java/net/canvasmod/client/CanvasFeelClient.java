@@ -2,6 +2,7 @@ package net.canvasmod.client;
 
 import java.util.Locale;
 import net.canvasmod.CanvasFeelProfile;
+import net.canvasmod.CanvasFeatureConfig;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
 import net.canvasmod.HomeStatePayload;
@@ -132,8 +133,12 @@ final class CanvasFeelClient {
         if (client.level.getChunkSource().getChunkNow(pos.getX() >> 4, pos.getZ() >> 4) == null) return;
 
         String dimension = client.level.dimension().identifier().toString();
+        CanvasFeatureConfig config = CanvasFeatureConfig.current();
+        boolean homeEnabled = config.enabled(CanvasFeatureConfig.Family.HOME);
+        boolean weatherEnabled = config.enabled(CanvasFeatureConfig.Family.WEATHER);
+        boolean rareEnabled = config.enabled(CanvasFeatureConfig.Family.RARE_MOMENTS);
 
-        if (CI_VISUAL_TEST && tick >= 60) {
+        if (homeEnabled && CI_VISUAL_TEST && tick >= 60) {
             if (!hasHome) {
                 hasHome = true;
                 homeDimension = dimension;
@@ -145,16 +150,17 @@ final class CanvasFeelClient {
                 System.out.println("CANVAS_CI_VISUAL_ACTIVE");
                 ciVisualAnnounced = true;
             }
-        } else if (!hasHome && tick % SAMPLE_INTERVAL == 0) {
+        } else if (homeEnabled && !hasHome && tick % SAMPLE_INTERVAL == 0) {
             learnHome(dimension, pos);
         }
 
-        atHome = hasHome
+        atHome = homeEnabled
+                && hasHome
                 && homeDimension.equals(dimension)
                 && distanceSq(client.player.getX(), client.player.getY(), client.player.getZ(),
                     homeX + 0.5, homeY + 0.5, homeZ + 0.5) <= HOME_RADIUS_SQ;
 
-        observeReturn(dimension);
+        if (homeEnabled) observeReturn(dimension);
         if (familiarPulseTicks > 0) familiarPulseTicks = Math.max(0, familiarPulseTicks - 20);
         if (homeTransitionPulseTicks > 0) homeTransitionPulseTicks = Math.max(0, homeTransitionPulseTicks - 20);
         if (rareSurpriseTicks > 0) rareSurpriseTicks = Math.max(0, rareSurpriseTicks - 20);
@@ -162,7 +168,9 @@ final class CanvasFeelClient {
         boolean sheltered = isSheltered(pos);
         boolean raining = client.level.isRaining();
         boolean thundering = client.level.isThundering();
-        if (previousRaining && !raining) rainEndedTick = tick;
+        boolean effectiveRaining = weatherEnabled && raining;
+        boolean effectiveThundering = weatherEnabled && thundering;
+        if (previousRaining && !effectiveRaining) rainEndedTick = tick;
         int ticksSinceRainEnded = rainEndedTick <= Long.MIN_VALUE / 8
                 ? Integer.MAX_VALUE
                 : (int)Math.min(Integer.MAX_VALUE, tick - rainEndedTick);
@@ -175,17 +183,19 @@ final class CanvasFeelClient {
         }
 
         CanvasFeelProfile.Phase nextPhase =
-                CanvasFeelProfile.classify(atHome, sheltered, raining, thundering, dayTime);
+                CanvasFeelProfile.classify(atHome, sheltered, effectiveRaining, effectiveThundering, dayTime);
         if (nextPhase != phase) {
             onPhaseChanged(phase, nextPhase);
             phase = nextPhase;
         }
 
-        observeRareSurprise(raining, thundering, dayTime, worldDay);
+        if (rareEnabled) observeRareSurprise(effectiveRaining, effectiveThundering, dayTime, worldDay);
 
-        WeatherCharacterPolicy.Character nextWeather =
-                WeatherCharacterPolicy.classify(atHome, sheltered, raining, thundering, ticksSinceRainEnded);
-        if (CI_VISUAL_TEST && tick >= 220 && tick < 300) {
+        WeatherCharacterPolicy.Character nextWeather = weatherEnabled
+                ? WeatherCharacterPolicy.classify(
+                        atHome, sheltered, effectiveRaining, effectiveThundering, ticksSinceRainEnded)
+                : WeatherCharacterPolicy.Character.CLEAR;
+        if (weatherEnabled && CI_VISUAL_TEST && tick >= 220 && tick < 300) {
             nextWeather = WeatherCharacterPolicy.Character.THUNDER_SHELTERED;
             if (!ciWeatherAnnounced) {
                 System.out.println("CANVAS_CI_WEATHER_CHARACTER_ACTIVE");
@@ -200,7 +210,9 @@ final class CanvasFeelClient {
         weatherCharacter = nextWeather;
         director.setWeatherCharacter(weatherCharacter);
 
-        String weatherAmbience = WeatherCharacterPolicy.ambienceEvent(weatherCharacter);
+        String weatherAmbience = weatherEnabled
+                ? WeatherCharacterPolicy.ambienceEvent(weatherCharacter)
+                : "";
         if (!weatherAmbience.isBlank()) {
             setAmbience(
                     weatherAmbience,
@@ -211,11 +223,14 @@ final class CanvasFeelClient {
                     CanvasFeelProfile.ambienceEvent(phase),
                     CanvasFeelProfile.volume(phase, sheltered),
                     CanvasFeelProfile.pitch(phase));
-        } else {
+        } else if (weatherEnabled) {
             setAwayAmbience(dayTime, sheltered);
+        } else {
+            stopAmbience(25);
+            ambienceKey = "";
         }
 
-        previousRaining = raining;
+        previousRaining = effectiveRaining;
     }
 
     private void observeRareSurprise(boolean raining, boolean thundering, long dayTime, long worldDay) {
