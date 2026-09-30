@@ -1,0 +1,32 @@
+name: Canvas bundle integrity adversarial fixtures
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/test_bundle_integrity.py'
+      - 'scripts/package_candidate.py'
+      - 'scripts/verify_bundle.py'
+      - '.github/workflows/bundle-integrity.yml'
+      - 'compatibility/companion-matrix.json'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/test_bundle_integrity.py'
+      - 'scripts/package_candidate.py'
+      - 'scripts/verify_bundle.py'
+      - '.github/workflows/bundle-integrity.yml'
+      - 'compatibility/companion-matrix.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adversarial_bundle_integrity:
+    name: Reject corrupted and substituted bundles
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run deterministic adversarial archive fixtures
+        run: python3 scripts/test_bundle_integrity.py
