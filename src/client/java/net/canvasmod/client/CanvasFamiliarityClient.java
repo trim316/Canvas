@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import net.canvasmod.FamiliarityPolicy;
+import net.canvasmod.FamiliarBondPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.LowEndPerformanceBudgetPolicy;
-import net.canvasmod.SeasonalFamiliarityProfile;
 import net.canvasmod.WorldMemoryScopePolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -31,6 +31,7 @@ final class CanvasFamiliarityClient {
     private final CanvasExperienceDirector director;
     private final Map<UUID, Integer> familiarity = new HashMap<>();
     private final Map<UUID, Long> lastCue = new HashMap<>();
+    private final java.util.Set<UUID> greetedThisSession = new java.util.HashSet<>();
     private final Path stateFile = FabricLoader.getInstance().getConfigDir()
             .resolve("canvas-familiarity-v1.properties");
     private long tick;
@@ -57,6 +58,7 @@ final class CanvasFamiliarityClient {
         worldIdentity = next;
         familiarity.clear();
         lastCue.clear();
+        greetedThisSession.clear();
         director.setFamiliarNearby(false);
         if (!worldIdentity.isBlank()) load();
     }
@@ -98,12 +100,18 @@ final class CanvasFamiliarityClient {
         if (!FamiliarityPolicy.cueEligible(observed, true, sinceLast)) return;
         if (!director.allowMoment(MomentDensityPolicy.Kind.FAMILIAR_FACE, tick, false)) return;
 
-        client.player.sendSystemMessage(Component.literal("Canvas · A familiar face"));
+        FamiliarBondPolicy.Greeting greeting = FamiliarBondPolicy.greeting(
+                observed, greetedThisSession.contains(id), director.season());
+        if (greeting.bond() == FamiliarBondPolicy.Bond.UNKNOWN) return;
+        if (greeting.showText()) {
+            client.player.sendSystemMessage(Component.literal(
+                    greeting.bond() == FamiliarBondPolicy.Bond.OLD_FRIEND
+                            ? "Canvas · An old friend" : "Canvas · A familiar face"));
+        }
         feel.presentFamiliarFace(
-                SeasonalFamiliarityProfile.cueVolume(director.season()),
-                SeasonalFamiliarityProfile.cuePitch(director.season()),
-                SeasonalFamiliarityProfile.pulseArgb(director.season()));
+                greeting.volume(), greeting.pitchMultiplier(), greeting.pulseArgb());
         director.noteFamiliarMoment();
+        greetedThisSession.add(id);
         lastCue.put(id, tick);
         save();
     }
@@ -117,6 +125,7 @@ final class CanvasFamiliarityClient {
             UUID id = entries.get(i).getKey();
             familiarity.remove(id);
             lastCue.remove(id);
+            greetedThisSession.remove(id);
         }
     }
 
