@@ -82,6 +82,8 @@ final class CanvasPlaceRuntime {
                 player.getY(),
                 player.getZ());
         boolean familiarNow = knownPlace != null;
+        String activeLandmarkKey = "";
+        boolean landmarkNow = false;
         if (knownPlace == null) {
             state.landmarks.observe("", kind, tick);
         } else {
@@ -91,8 +93,10 @@ final class CanvasPlaceRuntime {
                     knownPlace.x(),
                     knownPlace.y(),
                     knownPlace.z());
+            activeLandmarkKey = landmarkKey;
             LandmarkFamiliarityTracker.Observation landmarkObservation =
                     state.landmarks.observe(landmarkKey, knownPlace.kind(), tick);
+            landmarkNow = state.landmarks.isLandmark(landmarkKey);
             if (landmarkObservation.becameLandmark()) {
                 evidence("landmark_recognized", player.getUUID().toString(),
                         "tick=" + tick
@@ -103,6 +107,7 @@ final class CanvasPlaceRuntime {
             }
         }
         sendPlaceState(player, state, kind, familiarNow);
+        sendLandmarkState(player, state, kind, activeLandmarkKey, landmarkNow);
 
         boolean recognized = state.accumulator.observe(
                 kind,
@@ -144,6 +149,12 @@ final class CanvasPlaceRuntime {
                 newPlace.z());
         state.landmarks.observe(landmarkKey, newPlace.kind(), tick);
         sendPlaceState(player, state, kind, true);
+        sendLandmarkState(
+                player,
+                state,
+                kind,
+                landmarkKey,
+                state.landmarks.isLandmark(landmarkKey));
         evidence("place_recognized", player.getUUID().toString(),
                 "tick=" + tick + "," + placeEvidence.summary()
                         + ",x=" + Math.round(x)
@@ -194,6 +205,26 @@ final class CanvasPlaceRuntime {
         ServerPlayNetworking.send(player, new PlaceStatePayload(
                 kind == null ? PlaceFamiliarityPolicy.Kind.NONE.name() : kind.name(),
                 familiar ? 1 : 0));
+    }
+
+    private static void sendLandmarkState(
+            ServerPlayer player,
+            State state,
+            PlaceFamiliarityPolicy.Kind kind,
+            String contextKey,
+            boolean landmark) {
+        PlaceFamiliarityPolicy.Kind safeKind =
+                kind == null ? PlaceFamiliarityPolicy.Kind.NONE : kind;
+        String safeKey = contextKey == null ? "" : contextKey;
+        String payloadKey = safeKind.name()
+                + "|" + safeKey
+                + "|" + (landmark ? "1" : "0");
+        if (payloadKey.equals(state.lastLandmarkPayloadKey)) return;
+        state.lastLandmarkPayloadKey = payloadKey;
+        ServerPlayNetworking.send(player, new LandmarkStatePayload(
+                safeKind.name(),
+                safeKey,
+                landmark ? 1 : 0));
     }
 
     void save() {
@@ -332,5 +363,6 @@ final class CanvasPlaceRuntime {
         final LandmarkFamiliarityTracker landmarks = new LandmarkFamiliarityTracker();
         final List<PlaceMemory> places = new ArrayList<>();
         String lastPayloadKey = "";
+        String lastLandmarkPayloadKey = "";
     }
 }

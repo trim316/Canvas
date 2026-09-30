@@ -45,7 +45,7 @@ text = log.read_text(encoding="utf-8", errors="replace")
 text_lower = text.lower()
 
 required = [
-    "canvas 0.2.0-alpha.23",
+    "canvas 0.2.0-alpha.24",
     "Reloading ResourceManager:",
     "Sound engine started",
 ]
@@ -88,6 +88,8 @@ if "CANVAS_CI_EXPLORATION_MUSIC_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas exploration music presentation")
 if "CANVAS_CI_EXPLORATION_WEATHER_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas exploration weather presentation")
+if "CANVAS_CI_EXPLORATION_WONDER_ACTIVE" not in game_test_text:
+    raise SystemExit("client GameTest never activated Canvas rare exploration wonder presentation")
 if "CANVAS_CI_NOTHING_HAPPENS_GUARDRAIL_ACTIVE" not in game_test_text:
     print("advisory: client did not naturally trigger a Nothing Happens suppression; "
           "the density policy is covered by deterministic server GameTests")
@@ -115,6 +117,9 @@ forbidden = [
     "File canvas:sounds/cues/exploration_rain_dock.ogg does not exist",
     "File canvas:sounds/cues/exploration_storm_overlook.ogg does not exist",
     "File canvas:sounds/cues/exploration_field_after_rain.ogg does not exist",
+    "File canvas:sounds/cues/wonder_horizon_glow.ogg does not exist",
+    "File canvas:sounds/cues/wonder_harbor_hush.ogg does not exist",
+    "File canvas:sounds/cues/wonder_golden_field.ogg does not exist",
     "File canvas:sounds/music/season_home_shift.ogg does not exist",
     "File canvas:sounds/cues/season_first_snow.ogg does not exist",
     "File canvas:sounds/cues/season_spring_chorus.ogg does not exist",
