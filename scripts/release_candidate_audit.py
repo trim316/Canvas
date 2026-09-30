@@ -147,6 +147,25 @@ with zipfile.ZipFile(bundle) as proven:
     if embedded_matrix != checkout_matrix:
         fail("embedded compatibility matrix differs from checked-in matrix")
 
+    install = proven.read("INSTALL-CANVAS.cmd").decode("utf-8", errors="replace")
+    restore = proven.read("RESTORE-CANVAS.cmd").decode("utf-8", errors="replace")
+    for needle in [
+        "Get-FileHash -Algorithm SHA256",
+        ".canvas-backup",
+        "Move-Item -Force",
+        "INSTALL-MANIFEST.json",
+    ]:
+        if needle not in install:
+            fail(f"installer missing transactional safeguard: {needle}")
+    for needle in [
+        ".canvas-backup",
+        "INSTALL-MANIFEST.json",
+        "Canvas backup restored",
+        "-notlike '*-restored'",
+    ]:
+        if needle not in restore:
+            fail(f"restore path missing safeguard: {needle}")
+
     hashes = {}
     for line in proven.read("SHA256SUMS.txt").decode("utf-8").splitlines():
         if not line.strip():
