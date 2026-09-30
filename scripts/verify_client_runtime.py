@@ -45,7 +45,7 @@ text = log.read_text(encoding="utf-8", errors="replace")
 text_lower = text.lower()
 
 required = [
-    "canvas 0.2.0-alpha.21",
+    "canvas 0.2.0-alpha.22",
     "Reloading ResourceManager:",
     "Sound engine started",
 ]
