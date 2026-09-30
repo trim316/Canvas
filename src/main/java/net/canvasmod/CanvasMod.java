@@ -18,6 +18,7 @@ public final class CanvasMod implements ModInitializer {
         PayloadTypeRegistry.clientboundPlay().register(PlaceStatePayload.TYPE, PlaceStatePayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(LandmarkStatePayload.TYPE, LandmarkStatePayload.CODEC);
         PayloadTypeRegistry.clientboundPlay().register(WorldIdentityPayload.TYPE, WorldIdentityPayload.CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(CommunityGatheringPayload.TYPE, CommunityGatheringPayload.CODEC);
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
             home.onServerStarting(server);
