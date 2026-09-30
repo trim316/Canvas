@@ -153,6 +153,13 @@ with zipfile.ZipFile(bundle) as proven:
             continue
         digest, rel = line.split("  ", 1)
         hashes[rel] = digest.lower()
+    expected_hashed = set(names) - {"SHA256SUMS.txt"}
+    if set(hashes) != expected_hashed:
+        fail(
+            "SHA256SUMS coverage mismatch: "
+            f"missing={sorted(expected_hashed - set(hashes))} "
+            f"extra={sorted(set(hashes) - expected_hashed)}"
+        )
     for rel, expected in hashes.items():
         if rel not in names:
             fail(f"SHA256SUMS references missing path: {rel}")
