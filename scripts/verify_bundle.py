@@ -81,6 +81,13 @@ with zipfile.ZipFile(bundle) as z:
         if meta.get("id") != entry["mod_id"]:
             raise SystemExit(f"manifest mod id mismatch: {rel}")
 
+    expected_hashed = set(names) - {"SHA256SUMS.txt"}
+    if set(hashes) != expected_hashed:
+        raise SystemExit(
+            "SHA256SUMS coverage mismatch: "
+            f"missing={sorted(expected_hashed - set(hashes))} "
+            f"extra={sorted(set(hashes) - expected_hashed)}"
+        )
     for rel, digest in hashes.items():
         if rel not in names:
             raise SystemExit(f"SHA256SUMS references missing file: {rel}")
