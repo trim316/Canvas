@@ -37,7 +37,7 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Automated four-season scenario campaign. Implemented in alpha.19 with deterministic coverage of seasonal HOME, village, familiar, first-snow, and rare-moment behavior; mark proven after full CI is green.
 
 ### P2 — Exploration, wonder, and place attachment
-- [ ] Place familiarity beyond HOME: paths, docks, farms, viewpoints, gathering spots.
+- [x] Place familiarity beyond HOME: paths, docks, farms, viewpoints, gathering spots. Implemented on the P2 branch with loaded-only semantic evidence, repeated recognition, bounded persistent memory, and performance accounting; mark proven after full CI is green.
 - [ ] Exploration music/context director.
 - [ ] Weather + terrain semantic moments.
 - [ ] Repeated-route familiarity.
