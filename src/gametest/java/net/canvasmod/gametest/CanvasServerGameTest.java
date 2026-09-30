@@ -1629,6 +1629,46 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.succeed();
     }
 
+    @GameTest
+    public void rareExplorationMemoriesStayInsideTheirOwnWorldBranch(GameTestHelper context)
+            throws Exception {
+        var dir = Files.createTempDirectory("canvas-scoped-wonder-test");
+        var file = dir.resolve("wonders.properties");
+        String landmark = "VIEWPOINT|minecraft:overworld|11,8,11";
+        String first = WorldMemoryScopePolicy.scope("world-one|branch-a", landmark);
+        String fork = WorldMemoryScopePolicy.scope("world-one|branch-b", landmark);
+        String other = WorldMemoryScopePolicy.scope("world-two|branch-a", landmark);
+
+        context.assertTrue(!first.isBlank() && !fork.isBlank() && !other.isBlank()
+                        && !first.equals(fork) && !first.equals(other),
+                "Same landmark coordinates must have distinct branch-qualified identities");
+        context.assertTrue(WorldMemoryScopePolicy.scope("", landmark).isBlank(),
+                "An unknown world identity must not create a writeable wonder key");
+
+        ExplorationWonderMemoryStore store = new ExplorationWonderMemoryStore(file);
+        store.note(first, 42L);
+        store.note(first, 43L);
+        store.note(fork, 8L);
+        // The legacy unscoped record is never treated as belonging to an
+        // arbitrary new branch; guessing would leak privacy across worlds.
+        store.note(landmark, 3L);
+        ExplorationWonderMemoryStore reloaded = new ExplorationWonderMemoryStore(file);
+        context.assertTrue(reloaded.snapshot(first).lastWorldDay() == 43L
+                        && reloaded.snapshot(first).moments() == 2,
+                "Actual world-scoped wonder history must survive save/reload");
+        context.assertTrue(reloaded.snapshot(fork).moments() == 1
+                        && reloaded.snapshot(fork).lastWorldDay() == 8L,
+                "A copied world with a different branch must have separate wonder history");
+        context.assertTrue(reloaded.snapshot(other).moments() == 0,
+                "Unrelated worlds cannot inherit matching landmark cooldowns");
+        context.assertTrue(reloaded.snapshot("").moments() == 0,
+                "Before world identity arrives, exploring must not read global wonder history");
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
     @Override
     public void invokeTestMethod(GameTestHelper context, Method method) throws ReflectiveOperationException {
         method.invoke(this, context);
