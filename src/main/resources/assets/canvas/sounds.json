@@ -265,5 +265,50 @@
         "volume": 1
       }
     ]
+  },
+  "season.rare_first_snow": {
+    "sounds": [
+      {
+        "name": "canvas:cues/season_first_snow",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "season.rare_spring_chorus": {
+    "sounds": [
+      {
+        "name": "canvas:cues/season_spring_chorus",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "season.rare_summer_afterglow": {
+    "sounds": [
+      {
+        "name": "canvas:cues/season_summer_afterglow",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "season.rare_autumn_hush": {
+    "sounds": [
+      {
+        "name": "canvas:cues/season_autumn_hush",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "season.rare_winter_stillness": {
+    "sounds": [
+      {
+        "name": "canvas:cues/season_winter_stillness",
+        "stream": false,
+        "volume": 1
+      }
+    ]
   }
 }

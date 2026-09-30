@@ -5,6 +5,7 @@ import java.util.List;
 import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.VillageLifePolicy;
+import net.canvasmod.SeasonalVillageProfile;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -80,7 +81,10 @@ final class CanvasVillageLifeClient {
             String event = ContextualMusicPolicy.eventFor(next);
             if (!event.isBlank()
                     && director.allowMoment(MomentDensityPolicy.Kind.VILLAGE_RHYTHM, tick, true)) {
-                playMusicMoment(event, musicVolume(next), musicPitch(next));
+                playMusicMoment(
+                        event,
+                        musicVolume(next) * SeasonalVillageProfile.musicVolumeMultiplier(director.season()),
+                        musicPitch(next) * SeasonalVillageProfile.musicPitchMultiplier(director.season()));
                 presentationTicks = next == VillageLifePolicy.Rhythm.GATHERING ? 120 : 80;
                 lastMusicMoment = tick;
                 director.noteVillageMoment();
@@ -142,12 +146,7 @@ final class CanvasVillageLifeClient {
         int width = client.getWindow().getGuiScaledWidth();
         int height = client.getWindow().getGuiScaledHeight();
         int band = Math.max(2, Math.min(width, height) / 90);
-        int color = switch (rhythm) {
-            case WAKE -> 0x38FFE4A6;
-            case WIND_DOWN -> 0x38FFB26B;
-            case GATHERING -> 0x44FFD28A;
-            default -> 0;
-        };
+        int color = SeasonalVillageProfile.accentArgb(director.season(), rhythm);
 
         if (color == 0) return;
         graphics.fill(0, 0, width, band, color);

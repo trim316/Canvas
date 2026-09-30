@@ -1,7 +1,7 @@
 package net.canvasmod;
 
 public final class MomentDensityPolicy {
-    public enum Kind { HOMECOMING, FAMILIAR_FACE, VILLAGE_RHYTHM, RARE_SURPRISE, PHASE_SHIFT, WEATHER_TRANSITION, SEASON_SHIFT }
+    public enum Kind { HOMECOMING, FAMILIAR_FACE, VILLAGE_RHYTHM, RARE_SURPRISE, PHASE_SHIFT, WEATHER_TRANSITION, SEASON_SHIFT, SEASONAL_RARE }
 
     public static final long GLOBAL_MIN_GAP_TICKS = 20L * 10L;
     public static final long WINDOW_TICKS = 20L * 60L * 5L;

@@ -27,14 +27,14 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Performance gate: prove observation/orchestration stays within budget and never causes forced chunk loads. Implemented in alpha.17 with bounded probe-rate policy plus production-source mutation/chunk-load invariant verification; mark proven only after full CI is green.
 
 ### P1 — Seasons of Home
-- [x] Season-provider abstraction so Canvas observes an installed season mod rather than owning season simulation. Implemented in alpha.18 with fail-closed Serene Seasons reflection; mark proven only after full CI is green.
-- [x] Spring/summer/autumn/winter atmosphere profiles. Implemented in alpha.18 with restrained audio/visual profiles; mark proven only after full CI is green.
-- [x] Seasonal HOME ambience and music orchestration. Implemented in alpha.18 as a layered HOME signature plus density-governed season transition music; mark proven only after full CI is green.
-- [ ] Seasonal village rhythm interpretation.
-- [ ] Seasonal familiar-mob presentation.
-- [ ] First-snow moment and other rare seasonal moments.
-- [ ] Persistence of seasonal memories without punitive crop/calendar mechanics.
-- [ ] Automated four-season scenario campaign.
+- [x] Season-provider abstraction so Canvas observes an installed season mod rather than owning season simulation. Proven by alpha.18 automated server/client/runtime evidence.
+- [x] Spring/summer/autumn/winter atmosphere profiles. Proven by alpha.18 automated server/client/runtime evidence.
+- [x] Seasonal HOME ambience and music orchestration. Proven by alpha.18 automated server/client/runtime evidence.
+- [x] Seasonal village rhythm interpretation. Implemented in alpha.19 with season-aware presentation only; mark proven after full CI is green.
+- [x] Seasonal familiar-mob presentation. Implemented in alpha.19 with season-aware cue tone and pulse; mark proven after full CI is green.
+- [x] First-snow moment and other rare seasonal moments. Implemented in alpha.19 with fail-closed snowfall observation, deterministic rarity, and density gating; mark proven after full CI is green.
+- [x] Persistence of seasonal memories without punitive crop/calendar mechanics. Implemented in alpha.19 with HOME-scoped season continuity and first-snow memory; mark proven after full CI is green.
+- [x] Automated four-season scenario campaign. Implemented in alpha.19 with deterministic coverage of seasonal HOME, village, familiar, first-snow, and rare-moment behavior; mark proven after full CI is green.
 
 ### P2 — Exploration, wonder, and place attachment
 - [ ] Place familiarity beyond HOME: paths, docks, farms, viewpoints, gathering spots.

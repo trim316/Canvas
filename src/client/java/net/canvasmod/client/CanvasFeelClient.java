@@ -60,6 +60,7 @@ final class CanvasFeelClient {
     private boolean ciVisualAnnounced;
     private boolean ciRareAnnounced;
     private int familiarPulseTicks;
+    private int familiarPulseArgb = 0x66FFD28A;
     private int homeTransitionPulseTicks;
     private int rareSurpriseTicks;
     private RareSurprisePolicy.Moment rareMoment = RareSurprisePolicy.Moment.NONE;
@@ -85,8 +86,13 @@ final class CanvasFeelClient {
     boolean isAtHome() { return atHome; }
 
     void presentFamiliarFace() {
+        presentFamiliarFace(0.30f, 1.0f, 0x66FFD28A);
+    }
+
+    void presentFamiliarFace(float volume, float pitch, int pulseArgb) {
         familiarPulseTicks = 60;
-        playCue("feel.familiar_face", 0.30f, 1.0f);
+        familiarPulseArgb = pulseArgb;
+        playCue("feel.familiar_face", volume, pitch);
     }
 
     void register() {
@@ -430,7 +436,7 @@ final class CanvasFeelClient {
             int cx = width / 2;
             int cy = height / 2;
             int radius = 14;
-            int pulse = 0x66FFD28A;
+            int pulse = familiarPulseArgb;
             graphics.fill(cx - radius, cy - radius, cx - 4, cy - radius + 2, pulse);
             graphics.fill(cx + 4, cy - radius, cx + radius, cy - radius + 2, pulse);
             graphics.fill(cx - radius, cy + radius - 2, cx - 4, cy + radius, pulse);

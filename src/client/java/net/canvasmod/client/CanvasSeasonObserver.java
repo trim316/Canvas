@@ -22,6 +22,22 @@ final class CanvasSeasonObserver {
         return new SeasonPolicy.Observation(SeasonPolicy.Season.UNKNOWN, "none", "");
     }
 
+    boolean isSnowingAt(Minecraft client) {
+        if (Boolean.parseBoolean(System.getenv().getOrDefault("CANVAS_SNOW_TEST", "false"))) return true;
+        if (client.level == null || client.player == null) return false;
+        Object pos = client.player.blockPosition();
+        try {
+            for (Method method : client.level.getClass().getMethods()) {
+                if (!method.getName().equals("isSnowingAt")
+                        || method.getParameterCount() != 1
+                        || !method.getParameterTypes()[0].isAssignableFrom(pos.getClass())) continue;
+                Object value = method.invoke(client.level, pos);
+                return value instanceof Boolean result && result;
+            }
+        } catch (ReflectiveOperationException | LinkageError ignored) { }
+        return false;
+    }
+
     private SeasonPolicy.Observation observeSereneSeasons(Minecraft client) {
         try {
             Class<?> helper = Class.forName("sereneseasons.api.season.SeasonHelper");

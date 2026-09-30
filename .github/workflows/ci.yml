@@ -78,6 +78,8 @@ jobs:
     env:
       ALSOFT_DRIVERS: "null"
       CANVAS_VISUAL_TEST: "true"
+      CANVAS_SEASON_TEST: "winter"
+      CANVAS_SNOW_TEST: "true"
     steps:
       - uses: actions/checkout@v4
 
@@ -172,6 +174,8 @@ jobs:
           echo "- Fabric Loom build for Minecraft 26.2"
           echo "- semantic HOME loaded-world GameTests"
           echo "- Milestone-0 eight-moment scenario campaign"
+          echo "- Seasons of Home four-season scenario campaign"
+          echo "- persistent first-snow and seasonal-memory policy"
           echo "- bounded observation/performance policy"
           echo "- no-production-mutation / no-forced-chunk-load source gate"
           echo "- all-Mob familiarity policy GameTests"

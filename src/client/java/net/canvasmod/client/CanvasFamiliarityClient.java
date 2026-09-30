@@ -11,6 +11,7 @@ import java.util.Properties;
 import java.util.UUID;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.MomentDensityPolicy;
+import net.canvasmod.SeasonalFamiliarityProfile;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
@@ -83,7 +84,10 @@ final class CanvasFamiliarityClient {
         if (!director.allowMoment(MomentDensityPolicy.Kind.FAMILIAR_FACE, tick, false)) return;
 
         client.player.sendSystemMessage(Component.literal("Canvas · A familiar face"));
-        feel.presentFamiliarFace();
+        feel.presentFamiliarFace(
+                SeasonalFamiliarityProfile.cueVolume(director.season()),
+                SeasonalFamiliarityProfile.cuePitch(director.season()),
+                SeasonalFamiliarityProfile.pulseArgb(director.season()));
         director.noteFamiliarMoment();
         lastCue.put(id, tick);
         save();

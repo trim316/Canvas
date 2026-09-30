@@ -17,6 +17,11 @@ import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.SeasonPolicy;
+import net.canvasmod.SeasonalFamiliarityProfile;
+import net.canvasmod.SeasonalRareMomentPolicy;
+import net.canvasmod.SeasonalVillageProfile;
+import net.canvasmod.CanvasSeasonMemoryStore;
+import net.canvasmod.SeasonsOfHomeScenarioPolicy;
 import net.canvasmod.SeasonalHomeProfile;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
@@ -518,6 +523,103 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 ObservationBudgetPolicy.withinBudget(),
                 "HOME observation equivalent probe rate must stay within budget: "
                         + ObservationBudgetPolicy.equivalentBlockProbesPerSecond());
+        context.succeed();
+    }
+
+
+    @GameTest
+    public void seasonalVillageAndFamiliarPresentationRemainInterpretive(GameTestHelper context) {
+        context.assertTrue(
+                SeasonalVillageProfile.musicPitchMultiplier(SeasonPolicy.Season.SPRING)
+                        > SeasonalVillageProfile.musicPitchMultiplier(SeasonPolicy.Season.WINTER),
+                "Village presentation should read spring and winter differently without changing villager AI");
+        context.assertTrue(
+                SeasonalFamiliarityProfile.cuePitch(SeasonPolicy.Season.SPRING)
+                        > SeasonalFamiliarityProfile.cuePitch(SeasonPolicy.Season.WINTER),
+                "Familiar faces should carry a restrained seasonal tone");
+        context.assertTrue(
+                SeasonalVillageProfile.accentArgb(
+                        SeasonPolicy.Season.AUTUMN, VillageLifePolicy.Rhythm.GATHERING) != 0,
+                "Seasonal gathering interpretation must remain presentation-only and visible");
+        context.succeed();
+    }
+
+    @GameTest
+    public void firstSnowAndSeasonalRareMomentsStaySparse(GameTestHelper context) {
+        context.assertTrue(
+                SeasonalRareMomentPolicy.classify(
+                        SeasonPolicy.Season.WINTER, true, true, 2L, 99L, false)
+                        == SeasonalRareMomentPolicy.Moment.FIRST_SNOW,
+                "First observed winter snow at HOME should be eligible exactly once");
+        context.assertTrue(
+                SeasonalRareMomentPolicy.classify(
+                        SeasonPolicy.Season.WINTER, true, true, 2L, 99L, true)
+                        != SeasonalRareMomentPolicy.Moment.FIRST_SNOW,
+                "First snow must not repeat after it has been remembered");
+        context.assertTrue(
+                SeasonalRareMomentPolicy.classify(
+                        SeasonPolicy.Season.SPRING, true, false, 13L, 1L, false)
+                        == SeasonalRareMomentPolicy.Moment.NONE,
+                "Seasonal rare moments must respect multi-day quiet space");
+        context.assertTrue(
+                SeasonalRareMomentPolicy.classify(
+                        SeasonPolicy.Season.SPRING, false, false, 13L, 99L, false)
+                        == SeasonalRareMomentPolicy.Moment.NONE,
+                "Seasonal HOME moments must not leak into unrelated exploration");
+        context.succeed();
+    }
+
+    @GameTest
+    public void seasonalMemoryPersistsTransitionsAndFirstSnow(GameTestHelper context) throws Exception {
+        var dir = Files.createTempDirectory("canvas-season-memory-test");
+        var file = dir.resolve("season-memory.properties");
+
+        CanvasSeasonMemoryStore first = new CanvasSeasonMemoryStore(file);
+        first.bind("minecraft:overworld|10|64|20");
+        first.observeSeason(SeasonPolicy.Season.AUTUMN);
+        first.observeSeason(SeasonPolicy.Season.WINTER);
+        first.noteSeasonalMoment(SeasonalRareMomentPolicy.Moment.FIRST_SNOW, 42L);
+
+        CanvasSeasonMemoryStore reloaded = new CanvasSeasonMemoryStore(file);
+        reloaded.bind("minecraft:overworld|10|64|20");
+        var snapshot = reloaded.snapshot();
+
+        context.assertTrue(snapshot.lastSeason() == SeasonPolicy.Season.WINTER,
+                "Last observed season must survive reload");
+        context.assertTrue(snapshot.seasonTransitions() == 1,
+                "Season transition history must survive reload");
+        context.assertTrue(snapshot.seasonalMoments() == 1
+                        && snapshot.lastSeasonalMomentDay() == 42L,
+                "Seasonal moment history must survive reload");
+        context.assertTrue(snapshot.firstSnowSeen(),
+                "First-snow memory must survive reload");
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
+    @GameTest
+    public void fourSeasonScenarioCampaignCoversSeasonsOfHome(GameTestHelper context) {
+        EnumSet<SeasonsOfHomeScenarioPolicy.Experience> seen =
+                EnumSet.noneOf(SeasonsOfHomeScenarioPolicy.Experience.class);
+
+        seen.addAll(SeasonsOfHomeScenarioPolicy.observe(new SeasonsOfHomeScenarioPolicy.Frame(
+                SeasonPolicy.Season.SPRING, true, VillageLifePolicy.Rhythm.WAKE,
+                true, SeasonalRareMomentPolicy.Moment.SPRING_CHORUS)));
+        seen.addAll(SeasonsOfHomeScenarioPolicy.observe(new SeasonsOfHomeScenarioPolicy.Frame(
+                SeasonPolicy.Season.SUMMER, true, VillageLifePolicy.Rhythm.GATHERING,
+                false, SeasonalRareMomentPolicy.Moment.SUMMER_AFTERGLOW)));
+        seen.addAll(SeasonsOfHomeScenarioPolicy.observe(new SeasonsOfHomeScenarioPolicy.Frame(
+                SeasonPolicy.Season.AUTUMN, true, VillageLifePolicy.Rhythm.WIND_DOWN,
+                true, SeasonalRareMomentPolicy.Moment.AUTUMN_HUSH)));
+        seen.addAll(SeasonsOfHomeScenarioPolicy.observe(new SeasonsOfHomeScenarioPolicy.Frame(
+                SeasonPolicy.Season.WINTER, true, VillageLifePolicy.Rhythm.QUIET_NIGHT,
+                true, SeasonalRareMomentPolicy.Moment.FIRST_SNOW)));
+
+        context.assertTrue(
+                seen.equals(EnumSet.allOf(SeasonsOfHomeScenarioPolicy.Experience.class)),
+                "Four-season campaign must cover every Seasons of Home experience: " + seen);
         context.succeed();
     }
 

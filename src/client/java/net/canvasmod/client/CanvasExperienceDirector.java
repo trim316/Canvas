@@ -11,14 +11,19 @@ final class CanvasExperienceDirector {
     private final MomentDensityPolicy.Budget momentBudget = new MomentDensityPolicy.Budget();
     private final CanvasWorldMemoryStore worldMemory = new CanvasWorldMemoryStore(
             FabricLoader.getInstance().getConfigDir().resolve("canvas-world-memory-v1.properties"));
+    private final net.canvasmod.CanvasSeasonMemoryStore seasonMemory = new net.canvasmod.CanvasSeasonMemoryStore(
+            FabricLoader.getInstance().getConfigDir().resolve("canvas-season-memory-v1.properties"));
     private boolean memoryBound;
     private VillageLifePolicy.Rhythm villageRhythm = VillageLifePolicy.Rhythm.NONE;
     private WeatherCharacterPolicy.Character weatherCharacter = WeatherCharacterPolicy.Character.CLEAR;
     private boolean familiarNearby;
+    private net.canvasmod.SeasonPolicy.Season season = net.canvasmod.SeasonPolicy.Season.UNKNOWN;
     private boolean ciGuardrailAnnounced;
 
     void bindHome(String dimension, int x, int y, int z) {
-        worldMemory.bind(dimension + "|" + x + "|" + y + "|" + z);
+        String scope = dimension + "|" + x + "|" + y + "|" + z;
+        worldMemory.bind(scope);
+        seasonMemory.bind(scope);
         memoryBound = true;
     }
 
@@ -27,6 +32,31 @@ final class CanvasExperienceDirector {
     }
 
     void setFamiliarNearby(boolean value) { familiarNearby = value; }
+
+    void setSeason(net.canvasmod.SeasonPolicy.Season value) {
+        season = value == null ? net.canvasmod.SeasonPolicy.Season.UNKNOWN : value;
+        if (memoryBound && season != net.canvasmod.SeasonPolicy.Season.UNKNOWN) {
+            seasonMemory.observeSeason(season);
+        }
+    }
+
+    net.canvasmod.SeasonPolicy.Season season() { return season; }
+
+    void noteSeasonalMoment(net.canvasmod.SeasonalRareMomentPolicy.Moment moment, long worldDay) {
+        if (memoryBound) seasonMemory.noteSeasonalMoment(moment, worldDay);
+    }
+
+    long lastSeasonalMomentDay() {
+        return memoryBound ? seasonMemory.snapshot().lastSeasonalMomentDay() : Long.MIN_VALUE / 4L;
+    }
+
+    boolean firstSnowSeen() {
+        return memoryBound && seasonMemory.snapshot().firstSnowSeen();
+    }
+
+    int seasonTransitions() {
+        return memoryBound ? seasonMemory.snapshot().seasonTransitions() : 0;
+    }
 
     void setWeatherCharacter(WeatherCharacterPolicy.Character value) {
         weatherCharacter = value == null ? WeatherCharacterPolicy.Character.CLEAR : value;

@@ -128,6 +128,17 @@ def main() -> None:
 
     encode(ROOT / "music/season_home_shift.ogg",
            music_moment(13.0, [(146.83,.08),(196.0,.07),(246.94,.055),(293.66,.035)], .14, .62))
+    encode(ROOT / "cues/season_first_snow.ogg",
+           one_shot(5.8, [(293.66,.060),(392.0,.048),(493.88,.036),(659.25,.018)], .12))
+    encode(ROOT / "cues/season_spring_chorus.ogg",
+           one_shot(5.2, [(246.94,.060),(329.63,.048),(392.0,.036),(587.33,.018)], .15))
+    encode(ROOT / "cues/season_summer_afterglow.ogg",
+           one_shot(5.6, [(196.0,.060),(261.63,.048),(329.63,.034),(523.25,.017)], .14))
+    encode(ROOT / "cues/season_autumn_hush.ogg",
+           one_shot(5.8, [(146.83,.065),(196.0,.048),(246.94,.032),(349.23,.016)], .13))
+    encode(ROOT / "cues/season_winter_stillness.ogg",
+           one_shot(6.2, [(110.0,.060),(146.83,.043),(196.0,.027),(293.66,.014)], .11))
+
     encode(ROOT / "presence/season_spring.ogg",
            loop_samples(30.0, [(196.0,.035),(246.94,.030),(293.66,.022)], .22, .010))
     encode(ROOT / "presence/season_summer.ogg",
