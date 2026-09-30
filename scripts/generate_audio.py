@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import pathlib
+import random
 import struct
 import subprocess
 import tempfile
@@ -43,6 +44,49 @@ def loop_samples(duration: float, voices: list[tuple[float, float]], phase: floa
         value += air * math.sin(2.0 * math.pi * t / duration + phase)
         result.append(math.tanh(value * 1.25) * 0.34)
     return result
+
+
+
+def sheltered_weather_samples(duration: float, storm: bool) -> list[float]:
+    """Gentle generated roof-rain texture rather than another static chord.
+
+    A locally seeded noise bed gives many soft, irregular drops; filtered wind,
+    brief roof taps and a quiet, loop-period-matched harmonic layer leave space
+    for Minecraft/companion weather. This is original, reproducible procedural
+    audio, not an unlicensed weather recording.
+    """
+    sample_count = int(SR * duration)
+    overlap = min(SR // 4, max(1, sample_count // 8))
+    rng = random.Random(0xCA11A5 + (1 if storm else 0))
+    fast, low, tap = 0.0, 0.0, 0.0
+    raw: list[float] = []
+    low_frequency = quantized(0.078 if storm else 0.115, duration)
+    rumble_frequency = quantized(73.42 if storm else 110.0, duration)
+    tap_probability = 0.00018 if storm else 0.00011
+
+    for i in range(sample_count + overlap):
+        t = i / SR
+        white = rng.uniform(-1.0, 1.0)
+        fast = fast * 0.81 + white * 0.19
+        low = low * 0.998 + white * 0.002
+        gust = 0.78 + 0.22 * math.sin(2.0 * math.pi * low_frequency * t)
+        patter = (fast - low) * (0.37 if storm else 0.30) * gust
+        if rng.random() < tap_probability:
+            tap = 0.40 + rng.random() * 0.42
+        else:
+            tap *= 0.987
+        roof_taps = tap * (0.060 if storm else 0.044)
+        muted_rumble = math.sin(2.0 * math.pi * rumble_frequency * t)
+        muted_rumble *= 0.027 if storm else 0.012
+        raw.append(math.tanh(patter + roof_taps + muted_rumble) * 0.42)
+
+    # Overlap-add at the START of the OGG loop: output's last raw sample is
+    # continuous with the extra generated tail, which becomes the first sample.
+    # The transition finishes gradually into the original beginning.
+    for i in range(overlap):
+        blend = i / overlap
+        raw[i] = raw[sample_count + i] * (1.0 - blend) + raw[i] * blend
+    return raw[:sample_count]
 
 
 def one_shot(duration: float, voices: list[tuple[float, float]], decay: float) -> list[float]:
@@ -136,9 +180,9 @@ def main() -> None:
            music_moment(15.0, [(146.83,.075),(196.0,.060),(246.94,.045),(329.63,.025)], .10, .58))
 
     encode(ROOT / "presence/rain_on_roof.ogg",
-           loop_samples(26.0, [(98.0,.075),(123.47,.055),(146.83,.038)], .92, .024))
+           sheltered_weather_samples(26.0, storm=False))
     encode(ROOT / "presence/thunder_shelter.ogg",
-           loop_samples(26.0, [(73.42,.10),(92.50,.067),(110.0,.045)], 1.18, .030))
+           sheltered_weather_samples(26.0, storm=True))
 
     encode(ROOT / "music/season_home_shift.ogg",
            music_moment(13.0, [(146.83,.08),(196.0,.07),(246.94,.055),(293.66,.035)], .14, .62))
