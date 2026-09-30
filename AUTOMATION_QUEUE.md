@@ -41,7 +41,7 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Exploration music/context director. Implemented in alpha.20 with familiar-place transitions, place-specific tone, dedicated cooldowns, and the shared Nothing Happens music budget; mark proven after full CI is green.
 - [x] Weather + terrain semantic moments. Implemented in alpha.21 with familiar dock rain, viewpoint thunder, and farm-after-rain interpretation; presentation-only, HOME-suppressed, cooldown-bound, and globally density-limited; mark proven after full CI is green.
 - [x] Repeated-route familiarity. Implemented in alpha.22 with direction-neutral coarse path segments, repeated traversal thresholds, bounded persistent memory, and zero additional world scans; mark proven after full CI is green.
-- [ ] Quiet landmark recognition.
+- [x] Quiet landmark recognition. Implemented in alpha.23 with repeated separated returns to familiar docks, farms, viewpoints, and gathering spots; silent recognition, bounded persistence, and no additional world scans; mark proven after full CI is green.
 - [ ] Rare wonder library with strong density limits.
 
 ### P3 — Community and multiplayer
