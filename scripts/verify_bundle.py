@@ -97,7 +97,7 @@ with zipfile.ZipFile(bundle) as z:
 
     install = z.read("INSTALL-CANVAS.cmd").decode("utf-8", errors="replace")
     restore = z.read("RESTORE-CANVAS.cmd").decode("utf-8", errors="replace")
-    for needle in ["Get-FileHash -Algorithm SHA256", ".canvas-backup", "Move-Item -Force", "INSTALL-MANIFEST.json"]:
+    for needle in ["[Security.Cryptography.SHA256]::Create()", ".canvas-backup", "Move-Item -Force", "INSTALL-MANIFEST.json"]:
         if needle not in install:
             raise SystemExit(f"installer missing transactional safeguard: {needle}")
     for needle in [".canvas-backup", "INSTALL-MANIFEST.json", "Canvas backup restored", "-notlike '*-restored'"]:

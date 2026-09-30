@@ -150,7 +150,7 @@ with zipfile.ZipFile(bundle) as proven:
     install = proven.read("INSTALL-CANVAS.cmd").decode("utf-8", errors="replace")
     restore = proven.read("RESTORE-CANVAS.cmd").decode("utf-8", errors="replace")
     for needle in [
-        "Get-FileHash -Algorithm SHA256",
+        "[Security.Cryptography.SHA256]::Create()",
         ".canvas-backup",
         "Move-Item -Force",
         "INSTALL-MANIFEST.json",

@@ -1,0 +1,28 @@
+name: Canvas Windows installer validation
+on:
+  pull_request:
+    paths:
+      - 'scripts/package_candidate.py'
+      - 'scripts/verify_bundle.py'
+      - 'scripts/windows_installer_test.py'
+      - '.github/workflows/windows-installer.yml'
+      - 'compatibility/companion-matrix.json'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/package_candidate.py'
+      - 'scripts/verify_bundle.py'
+      - 'scripts/windows_installer_test.py'
+      - '.github/workflows/windows-installer.yml'
+      - 'compatibility/companion-matrix.json'
+  workflow_dispatch:
+
+jobs:
+  installer_integration:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run transactional installer and rollback scenarios
+        shell: pwsh
+        run: python scripts/windows_installer_test.py

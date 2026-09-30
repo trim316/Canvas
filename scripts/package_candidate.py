@@ -124,7 +124,8 @@ if not exist "%MODS%" (
 >>"%PS1%" echo foreach ($entry in $manifest.mods) {
 >>"%PS1%" echo   $path = Join-Path $incoming $entry.filename
 >>"%PS1%" echo   if (!(Test-Path $path)) { throw "Incoming mod missing: $($entry.filename)" }
->>"%PS1%" echo   $hash = (Get-FileHash -Algorithm SHA256 $path).Hash.ToLowerInvariant()
+>>"%PS1%" echo   $sha = [Security.Cryptography.SHA256]::Create()
+>>"%PS1%" echo   try { $stream = [IO.File]::OpenRead($path); try { $hash = [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() } finally { $stream.Dispose() } } finally { $sha.Dispose() }
 >>"%PS1%" echo   if ($hash -ne $entry.sha256.ToLowerInvariant()) { throw "SHA256 mismatch: $($entry.filename)" }
 >>"%PS1%" echo   if ((Get-ModId $path) -ne $entry.mod_id) { throw "Mod ID mismatch: $($entry.filename)" }
 >>"%PS1%" echo }
