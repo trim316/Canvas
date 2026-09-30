@@ -33,6 +33,7 @@ import net.canvasmod.VillageContinuityPolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.FamiliarBondPolicy;
+import net.canvasmod.FamiliarGreetingHistoryPolicy;
 import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomecomingPolicy;
 import net.canvasmod.LongJourneyHomecomingPolicy;
@@ -1784,6 +1785,41 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 "Leaving loaded village range must clear its rainy evidence");
         context.assertFalse(departed.observe(false, VillageLifePolicy.Rhythm.ACTIVE, 260),
                 "Returning after rain ended cannot fabricate an observed clearing");
+        context.succeed();
+    }
+
+    @GameTest
+    public void familiarGreetingMilestonesStayQuietAcrossReconnects(GameTestHelper context) {
+        int fresh = 0;
+        context.assertFalse(FamiliarGreetingHistoryPolicy.shouldAnnounce(
+                FamiliarBondPolicy.Bond.UNKNOWN, fresh),
+                "Unknown animals must not be announced");
+        context.assertTrue(FamiliarGreetingHistoryPolicy.shouldAnnounce(
+                FamiliarBondPolicy.Bond.RECOGNIZED, fresh),
+                "First genuine recognition should still feel rewarding");
+        int recognized = FamiliarGreetingHistoryPolicy.acknowledge(
+                FamiliarBondPolicy.Bond.RECOGNIZED, fresh);
+        context.assertTrue(recognized == 1,
+                "Recognition acknowledgement must be persisted as one simple tier");
+        context.assertFalse(FamiliarGreetingHistoryPolicy.shouldAnnounce(
+                FamiliarBondPolicy.Bond.RECOGNIZED, recognized),
+                "A reconnect must not cause repetitive familiar-face narration");
+        context.assertTrue(FamiliarGreetingHistoryPolicy.shouldAnnounce(
+                FamiliarBondPolicy.Bond.OLD_FRIEND, recognized),
+                "An established animal deserves its one genuinely new old-friend greeting");
+        int oldFriend = FamiliarGreetingHistoryPolicy.acknowledge(
+                FamiliarBondPolicy.Bond.OLD_FRIEND, recognized);
+        context.assertTrue(oldFriend == 2,
+                "Old-friend relationship milestone should persist");
+        context.assertFalse(FamiliarGreetingHistoryPolicy.shouldAnnounce(
+                FamiliarBondPolicy.Bond.OLD_FRIEND, oldFriend),
+                "Repeating old-friend text on every reconnection creates spam");
+        context.assertTrue(FamiliarGreetingHistoryPolicy.acknowledge(
+                FamiliarBondPolicy.Bond.RECOGNIZED, oldFriend) == 2,
+                "Older observations must never downgrade acknowledged relationship history");
+        context.assertFalse(FamiliarGreetingHistoryPolicy.shouldAnnounce(
+                null, oldFriend),
+                "Unknown relationship states must fail closed");
         context.succeed();
     }
 
