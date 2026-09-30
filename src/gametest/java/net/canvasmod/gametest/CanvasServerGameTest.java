@@ -24,6 +24,7 @@ import net.canvasmod.SharedGatheringPolicy;
 import net.canvasmod.SharedWorldMemoryStore;
 import net.canvasmod.P3MultiplayerScenarioPolicy;
 import net.canvasmod.CanvasFeatureConfig;
+import net.canvasmod.LongSessionSoakPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -1358,6 +1359,20 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         Files.deleteIfExists(configFile);
         Files.deleteIfExists(memoryFile);
         Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
+    @GameTest
+    public void longSessionSoakKeepsDensityBudgetsBounded(GameTestHelper context) {
+        LongSessionSoakPolicy.Result result =
+                LongSessionSoakPolicy.run(LongSessionSoakPolicy.DEFAULT_DAYS);
+
+        context.assertTrue(result.passed(),
+                "Thirty-day deterministic soak must preserve presentation/music ceilings: " + result);
+        context.assertTrue(result.days() == LongSessionSoakPolicy.DEFAULT_DAYS,
+                "Soak must cover the configured long-session horizon");
+        context.assertTrue(result.accepted() < result.attempts(),
+                "Nothing Happens guardrails must continue suppressing excess moments during long sessions");
         context.succeed();
     }
 
