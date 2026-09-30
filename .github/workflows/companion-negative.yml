@@ -1,0 +1,29 @@
+name: Canvas companion admission negative tests
+
+on:
+  pull_request:
+    paths:
+      - 'compatibility/companion-matrix.json'
+      - 'scripts/verify_compatibility_matrix.py'
+      - 'scripts/test_companion_admission_negative.py'
+      - '.github/workflows/companion-negative.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'compatibility/companion-matrix.json'
+      - 'scripts/verify_compatibility_matrix.py'
+      - 'scripts/test_companion_admission_negative.py'
+      - '.github/workflows/companion-negative.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  negative-companion-admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject six invalid production companion admission states
+        run: python3 scripts/test_companion_admission_negative.py
