@@ -13,7 +13,7 @@ with zipfile.ZipFile(jar) as z:
     meta = json.loads(z.read("fabric.mod.json"))
     names = set(z.namelist())
 
-assert meta["id"] == "canvas"
+assert meta["id"] == "cozycanvas"
 assert meta["depends"]["minecraft"] == "~26.2"
 assert "0.19.3" in meta["depends"]["fabricloader"]
 assert "0.157.0+26.2" in meta["depends"]["fabric-api"]
