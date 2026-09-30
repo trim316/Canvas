@@ -21,29 +21,36 @@ public final class CanvasMod implements ModInitializer {
         PayloadTypeRegistry.clientboundPlay().register(CommunityGatheringPayload.TYPE, CommunityGatheringPayload.CODEC);
 
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
-            home.onServerStarting(server);
-            places.onServerStarting(server);
-            settlements.onServerStarting(server);
+            CanvasFeatureConfig.reload();
+            var config = CanvasFeatureConfig.current();
+            if (config.enabled(CanvasFeatureConfig.Family.HOME)) home.onServerStarting(server);
+            if (config.enabled(CanvasFeatureConfig.Family.EXPLORATION)) places.onServerStarting(server);
+            if (config.enabled(CanvasFeatureConfig.Family.COMMUNITY)) settlements.onServerStarting(server);
             worldIdentity.onServerStarting(server);
         });
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            home.onServerTick(server);
-            places.onServerTick(server);
-            settlements.onServerTick(server);
+            var config = CanvasFeatureConfig.current();
+            if (config.enabled(CanvasFeatureConfig.Family.HOME)) home.onServerTick(server);
+            if (config.enabled(CanvasFeatureConfig.Family.EXPLORATION)) places.onServerTick(server);
+            if (config.enabled(CanvasFeatureConfig.Family.COMMUNITY)) settlements.onServerTick(server);
         });
         ServerLifecycleEvents.AFTER_SAVE.register((server, flush, force) -> {
-            home.save();
-            places.save();
-            settlements.save();
+            var config = CanvasFeatureConfig.current();
+            if (config.enabled(CanvasFeatureConfig.Family.HOME)) home.save();
+            if (config.enabled(CanvasFeatureConfig.Family.EXPLORATION)) places.save();
+            if (config.enabled(CanvasFeatureConfig.Family.COMMUNITY)) settlements.save();
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
-            home.onServerStopped();
-            places.onServerStopped();
-            settlements.onServerStopped();
+            var config = CanvasFeatureConfig.current();
+            if (config.enabled(CanvasFeatureConfig.Family.HOME)) home.onServerStopped();
+            if (config.enabled(CanvasFeatureConfig.Family.EXPLORATION)) places.onServerStopped();
+            if (config.enabled(CanvasFeatureConfig.Family.COMMUNITY)) settlements.onServerStopped();
         });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             worldIdentity.syncPlayer(handler.getPlayer());
-            home.syncPlayer(handler.getPlayer());
+            if (CanvasFeatureConfig.current().enabled(CanvasFeatureConfig.Family.HOME)) {
+                home.syncPlayer(handler.getPlayer());
+            }
         });
     }
 }
