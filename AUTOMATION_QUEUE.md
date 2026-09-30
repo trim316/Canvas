@@ -45,7 +45,7 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Rare wonder library with strong density limits. Implemented in alpha.24 with three landmark-earned context moments, deterministic sparse days, persistent per-landmark cooldown history, ten-minute local spacing, and the shared Nothing Happens ceiling; mark proven after full CI is green.
 
 ### P3 — Community and multiplayer
-- [ ] Shared settlement recognition.
+- [x] Shared settlement recognition. Implemented in alpha.25 by clustering durable semantic HOME anchors across players, assigning stable persisted settlement IDs, and requiring no additional world scans; mark proven after full CI is green.
 - [ ] Multiplayer-safe familiar faces and place memory.
 - [ ] Community gathering interpretation.
 - [ ] Shared but non-authoritative world memories.
