@@ -16,6 +16,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.world.level.storage.LevelResource;
 
 final class CanvasPlaceRuntime {
@@ -60,6 +61,15 @@ final class CanvasPlaceRuntime {
         PlaceFamiliarityPolicy.Kind kind = placeEvidence.classify();
         String dimension = level.dimension().identifier().toString();
 
+        boolean familiarNow = alreadyKnown(
+                state.places,
+                kind,
+                dimension,
+                player.getX(),
+                player.getY(),
+                player.getZ());
+        sendPlaceState(player, state, kind, familiarNow);
+
         boolean recognized = state.accumulator.observe(
                 kind,
                 dimension,
@@ -91,6 +101,7 @@ final class CanvasPlaceRuntime {
         }
 
         state.places.add(new PlaceMemory(kind, dimension, x, y, z));
+        sendPlaceState(player, state, kind, true);
         evidence("place_recognized", player.getUUID().toString(),
                 "tick=" + tick + "," + placeEvidence.summary()
                         + ",x=" + Math.round(x)
@@ -107,6 +118,7 @@ final class CanvasPlaceRuntime {
             double x,
             double y,
             double z) {
+        if (kind == null || kind == PlaceFamiliarityPolicy.Kind.NONE) return false;
         for (PlaceMemory place : places) {
             if (PlaceFamiliarityPolicy.samePlace(
                     place.kind(), place.dimension(), place.x(), place.y(), place.z(),
@@ -116,6 +128,20 @@ final class CanvasPlaceRuntime {
             }
         }
         return false;
+    }
+
+    private static void sendPlaceState(
+            ServerPlayer player,
+            State state,
+            PlaceFamiliarityPolicy.Kind kind,
+            boolean familiar) {
+        String key = (kind == null ? PlaceFamiliarityPolicy.Kind.NONE : kind).name()
+                + "|" + (familiar ? "1" : "0");
+        if (key.equals(state.lastPayloadKey)) return;
+        state.lastPayloadKey = key;
+        ServerPlayNetworking.send(player, new PlaceStatePayload(
+                kind == null ? PlaceFamiliarityPolicy.Kind.NONE.name() : kind.name(),
+                familiar ? 1 : 0));
     }
 
     void save() {
@@ -207,5 +233,6 @@ final class CanvasPlaceRuntime {
     private static final class State {
         final PlaceRecognitionAccumulator accumulator = new PlaceRecognitionAccumulator();
         final List<PlaceMemory> places = new ArrayList<>();
+        String lastPayloadKey = "";
     }
 }
