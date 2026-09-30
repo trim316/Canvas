@@ -12,6 +12,8 @@ import net.canvasmod.ExplorationMusicPolicy;
 import net.canvasmod.ExplorationWeatherPolicy;
 import net.canvasmod.RouteFamiliarityPolicy;
 import net.canvasmod.RouteFamiliarityTracker;
+import net.canvasmod.LandmarkRecognitionPolicy;
+import net.canvasmod.LandmarkFamiliarityTracker;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -840,6 +842,91 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.assertTrue(
                 tracker.entries().get(key) == RouteFamiliarityPolicy.REQUIRED_TRAVERSALS,
                 "Restored traversal counts must clamp at the familiarity threshold");
+        context.succeed();
+    }
+
+    @GameTest
+    public void quietLandmarksRequireMeaningfulFamiliarPlaceKinds(GameTestHelper context) {
+        context.assertTrue(
+                LandmarkRecognitionPolicy.eligibleKind(PlaceFamiliarityPolicy.Kind.VIEWPOINT),
+                "Viewpoints should be eligible to become quiet landmarks");
+        context.assertTrue(
+                LandmarkRecognitionPolicy.eligibleKind(PlaceFamiliarityPolicy.Kind.DOCK),
+                "Docks should be eligible to become quiet landmarks");
+        context.assertFalse(
+                LandmarkRecognitionPolicy.eligibleKind(PlaceFamiliarityPolicy.Kind.PATH),
+                "Ordinary path segments must not become landmarks");
+        context.assertFalse(
+                LandmarkRecognitionPolicy.eligibleKind(PlaceFamiliarityPolicy.Kind.NONE),
+                "Unknown context must remain unknown");
+        context.succeed();
+    }
+
+    @GameTest
+    public void quietLandmarksRequireSeparatedReturns(GameTestHelper context) {
+        LandmarkFamiliarityTracker tracker = new LandmarkFamiliarityTracker();
+        String key = LandmarkRecognitionPolicy.landmarkKey(
+                PlaceFamiliarityPolicy.Kind.VIEWPOINT,
+                "minecraft:overworld",
+                32.0, 80.0, 48.0);
+
+        long tick = 1000L;
+        for (int visit = 1; visit < LandmarkRecognitionPolicy.REQUIRED_VISITS; visit++) {
+            var observation = tracker.observe(
+                    key,
+                    PlaceFamiliarityPolicy.Kind.VIEWPOINT,
+                    tick);
+            context.assertFalse(observation.becameLandmark(),
+                    "A landmark must not be recognized before the configured visit threshold");
+            tracker.observe("", PlaceFamiliarityPolicy.Kind.NONE, tick + 20L);
+            tick += LandmarkRecognitionPolicy.MIN_REVISIT_GAP_TICKS;
+        }
+
+        var finalObservation = tracker.observe(
+                key,
+                PlaceFamiliarityPolicy.Kind.VIEWPOINT,
+                tick);
+        context.assertTrue(finalObservation.becameLandmark(),
+                "Repeated separated returns should quietly promote a familiar place to landmark");
+        context.assertTrue(tracker.isLandmark(key),
+                "Recognized landmark state must remain queryable");
+        context.succeed();
+    }
+
+    @GameTest
+    public void quietLandmarkStandingStillDoesNotFarmVisits(GameTestHelper context) {
+        LandmarkFamiliarityTracker tracker = new LandmarkFamiliarityTracker();
+        String key = LandmarkRecognitionPolicy.landmarkKey(
+                PlaceFamiliarityPolicy.Kind.DOCK,
+                "minecraft:overworld",
+                16.0, 64.0, 16.0);
+
+        tracker.observe(key, PlaceFamiliarityPolicy.Kind.DOCK, 1000L);
+        var repeated = tracker.observe(
+                key,
+                PlaceFamiliarityPolicy.Kind.DOCK,
+                1000L + LandmarkRecognitionPolicy.MIN_REVISIT_GAP_TICKS * 2L);
+
+        context.assertTrue(repeated.visits() == 0,
+                "Remaining continuously inside the same place must not count as a return");
+        context.assertFalse(tracker.isLandmark(key),
+                "Standing still must never manufacture landmark familiarity");
+        context.succeed();
+    }
+
+    @GameTest
+    public void quietLandmarkRestoreClampsPersistedVisits(GameTestHelper context) {
+        LandmarkFamiliarityTracker tracker = new LandmarkFamiliarityTracker();
+        String key = LandmarkRecognitionPolicy.landmarkKey(
+                PlaceFamiliarityPolicy.Kind.GATHERING_SPOT,
+                "minecraft:overworld",
+                64.0, 70.0, 64.0);
+        tracker.restore(key, 999);
+        context.assertTrue(tracker.isLandmark(key),
+                "Persisted landmark recognition must survive reload");
+        context.assertTrue(
+                tracker.visits().get(key) == LandmarkRecognitionPolicy.REQUIRED_VISITS,
+                "Restored landmark visits must clamp at the recognition threshold");
         context.succeed();
     }
 
