@@ -34,6 +34,8 @@ import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.FamiliarBondPolicy;
 import net.canvasmod.HomeEvidenceDetector;
 import net.canvasmod.HomecomingPolicy;
+import net.canvasmod.LongJourneyHomecomingPolicy;
+import net.canvasmod.AmbienceHandoffPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
@@ -1626,6 +1628,79 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 "Do not invent a familiarity classification for an unreviewed modded mob");
         context.assertFalse(FamiliarBondPolicy.eligibleVanillaSubject(null, false),
                 "Unknown registry identity must fail closed");
+        context.succeed();
+    }
+
+    @GameTest
+    public void homeAmbienceCrossfadeNeverStacksOldLoops(GameTestHelper context) {
+        context.assertTrue(AmbienceHandoffPolicy.oldestLoopsToRetire(0) == 0,
+                "A scene with no fading ambience must remain silent except its current sound");
+        context.assertTrue(AmbienceHandoffPolicy.oldestLoopsToRetire(1) == 0,
+                "One prior ambience may finish a restrained crossfade");
+        context.assertTrue(AmbienceHandoffPolicy.oldestLoopsToRetire(2) == 1,
+                "Two old loops require immediately retiring the oldest");
+        context.assertTrue(AmbienceHandoffPolicy.oldestLoopsToRetire(20) == 19,
+                "Rapid repeated phase or rain changes may not stack twenty audible loops");
+        context.succeed();
+    }
+
+    @GameTest
+    public void genuinelyLongTripsEarnQuietDistinctHomecomings(GameTestHelper context) {
+        var established = HomecomingPolicy.compose(
+                true, VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.CLEAR, 3);
+        long sufficientTime = LongJourneyHomecomingPolicy.MIN_AWAY_TICKS;
+        double farEnough = LongJourneyHomecomingPolicy.MIN_FURTHEST_DISTANCE_SQ;
+
+        context.assertFalse(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime * 3L, 54.0 * 54.0, false),
+                "AFK time near the doorstep cannot pretend to be distant exploration");
+        context.assertFalse(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime - 1, farEnough * 4, true),
+                "Rapid portal hops or a short excursion must retain ordinary homecoming");
+        context.assertTrue(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime, farEnough, false),
+                "Loaded position evidence of a genuine long walk must count");
+        context.assertTrue(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime, 0.0, true),
+                "A sustained journey through another dimension qualifies without overworld distance");
+        context.assertFalse(LongJourneyHomecomingPolicy.isLongJourney(
+                sufficientTime, Double.NaN, false),
+                "Unknown travel distance must never be treated as evidence");
+
+        var ordinary = LongJourneyHomecomingPolicy.adapt(
+                established, sufficientTime * 3, 54.0 * 54.0, false, 3);
+        context.assertTrue(ordinary.equals(established),
+                "Circling the house cannot manufacture a special homecoming");
+
+        var unearned = LongJourneyHomecomingPolicy.adapt(
+                established, sufficientTime, farEnough, false, 0);
+        context.assertTrue(unearned.equals(established),
+                "First-time visitors cannot receive an earned long-term welcome");
+
+        var earned = LongJourneyHomecomingPolicy.adapt(
+                established, sufficientTime, farEnough, false, 3);
+        context.assertTrue(earned.cueEvent().equals(established.cueEvent())
+                        && earned.musicEvent().equals(established.musicEvent()),
+                "A longer journey must reuse existing earned sound assets and music budget");
+        context.assertTrue(earned.cueVolume() < established.cueVolume()
+                        && earned.cuePitch() < established.cuePitch()
+                        && earned.pulseTicks() > established.pulseTicks(),
+                "A genuine long trip receives a softer, slightly longer welcome");
+
+        var quiet = HomecomingPolicy.compose(
+                false, VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.CLEAR, 5);
+        context.assertTrue(LongJourneyHomecomingPolicy.adapt(
+                        quiet, sufficientTime, farEnough, false, 5).equals(quiet),
+                "Unknown, quiet homes should not invent a familiar welcome");
+
+        var storm = HomecomingPolicy.compose(
+                true, VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.THUNDER_SHELTERED, 5);
+        context.assertTrue(LongJourneyHomecomingPolicy.adapt(
+                        storm, sufficientTime, farEnough, false, 5).equals(storm),
+                "Shelter in thunder keeps its existing distinctive storm treatment");
         context.succeed();
     }
 
