@@ -389,19 +389,22 @@ final class CanvasFeelClient {
 
         if (atHome && awaySince >= 0) {
             if (tick - awaySince >= MIN_AWAY_TICKS && tick - lastReturnCue >= RETURN_COOLDOWN) {
-                HomecomingPolicy.Plan plan = director.nextHomecoming();
+                // A suppressed cue is silence, not an earned world-memory event.
+                // Preview before either density gate and persist only after both accept.
+                HomecomingPolicy.Plan plan = director.previewHomecoming();
                 if (!allowMajorMoment()) {
                     awaySince = -1;
                     return;
                 }
-                homecomingFlavor = plan.flavor();
                 boolean music = !plan.musicEvent().isBlank();
                 if (director.allowMoment(MomentDensityPolicy.Kind.HOMECOMING, tick, music)) {
+                    plan = director.nextHomecoming();
+                    homecomingFlavor = plan.flavor();
                     playCue(plan.cueEvent(), plan.cueVolume(), plan.cuePitch());
                     if (music) playMusicMoment(plan.musicEvent(), 0.20f, plan.cuePitch());
                     homeTransitionPulseTicks = plan.pulseTicks();
                     lastReturnCue = tick;
-                recordMajorMoment();
+                    recordMajorMoment();
                 }
             }
             awaySince = -1;
