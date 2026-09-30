@@ -23,6 +23,7 @@ import net.canvasmod.WorldMemoryScopePolicy;
 import net.canvasmod.SharedGatheringPolicy;
 import net.canvasmod.SharedWorldMemoryStore;
 import net.canvasmod.P3MultiplayerScenarioPolicy;
+import net.canvasmod.CanvasFeatureConfig;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -1263,6 +1264,47 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                         && memory.communityGatherings() == 1
                         && memory.lastGatheringTick() == 3600L,
                 "P3 multiplayer campaign must prove shared observational history survives reload");
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
+    @GameTest
+    public void featureConfigDefaultsEveryExperienceFamilyOn(GameTestHelper context) throws Exception {
+        var dir = Files.createTempDirectory("canvas-feature-config-defaults");
+        var file = dir.resolve("canvas-features.properties");
+        CanvasFeatureConfig config = CanvasFeatureConfig.load(file);
+
+        for (CanvasFeatureConfig.Family family : CanvasFeatureConfig.Family.values()) {
+            context.assertTrue(config.enabled(family),
+                    "Canvas feature family should default on: " + family);
+        }
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
+    @GameTest
+    public void featureConfigCanDisableEveryExperienceFamily(GameTestHelper context) throws Exception {
+        var dir = Files.createTempDirectory("canvas-feature-config-disable");
+        var file = dir.resolve("canvas-features.properties");
+        java.util.Properties properties = new java.util.Properties();
+        for (CanvasFeatureConfig.Family family : CanvasFeatureConfig.Family.values()) {
+            properties.setProperty(
+                    "family." + family.name().toLowerCase(java.util.Locale.ROOT),
+                    "false");
+        }
+        try (var out = Files.newOutputStream(file)) {
+            properties.store(out, "Canvas test");
+        }
+
+        CanvasFeatureConfig config = CanvasFeatureConfig.load(file);
+        for (CanvasFeatureConfig.Family family : CanvasFeatureConfig.Family.values()) {
+            context.assertFalse(config.enabled(family),
+                    "Canvas feature family should respect explicit off: " + family);
+        }
 
         Files.deleteIfExists(file);
         Files.deleteIfExists(dir);
