@@ -134,9 +134,73 @@ jobs:
             build/run/gameTest/**
           if-no-files-found: error
 
+  constrained_client:
+    name: Constrained production client acceptance
+    needs: resolve_release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      ALSOFT_DRIVERS: "null"
+      CANVAS_VISUAL_TEST: "true"
+      CANVAS_SEASON_TEST: "winter"
+      CANVAS_SNOW_TEST: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve_release.outputs.target_sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.1"
+      - name: Install constrained production-client runtime
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libgl1 libopenal1 ffmpeg util-linux
+      - name: Resolve and admit exact production companion contract
+        run: |
+          python3 scripts/generate_audio.py
+          python3 scripts/fetch_companions.py
+          python3 scripts/admit_companions.py
+          python3 scripts/verify_compatibility_matrix.py ci-evidence/companion-admission.json
+      - name: Launch production client on one CPU
+        env:
+          CANVAS_COMPANION_DIR: ci-mods-active
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-evidence/constrained
+          START="$(date +%s)"
+          set -o pipefail
+          taskset -c 0 gradle runProductionClientGameTest --no-daemon --stacktrace 2>&1 | tee ci-evidence/constrained/console.log
+          END="$(date +%s)"
+          ELAPSED="$((END-START))"
+          echo "$ELAPSED" > ci-evidence/constrained/wall-seconds.txt
+          test "$ELAPSED" -le 1500
+          python3 scripts/verify_log_health.py
+          python3 scripts/verify_client_runtime.py
+      - name: Record constrained-host evidence boundary
+        run: |
+          python3 - <<'PY'
+          import json,pathlib
+          r={"schema":1,"result":"PASS","cpu_affinity":1,
+             "wall_seconds":int(pathlib.Path("ci-evidence/constrained/wall-seconds.txt").read_text()),
+             "environment":"GitHub ubuntu-24.04 hosted runner under taskset -c 0",
+             "meaning":"repeatable constrained-host regression evidence, not a claim about every low-end PC"}
+          pathlib.Path("ci-evidence/constrained/receipt.json").write_text(json.dumps(r,indent=2)+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exact-release-constrained-client
+          path: |
+            ci-evidence/constrained/**
+            run/logs/**
+          if-no-files-found: ignore
+
   acceptance_summary:
     name: Automated release acceptance gate
-    needs: [resolve_release, windows_exact_bundle, release_commit_safety]
+    needs: [resolve_release, windows_exact_bundle, release_commit_safety, constrained_client]
     runs-on: ubuntu-24.04
     if: success()
     steps:
