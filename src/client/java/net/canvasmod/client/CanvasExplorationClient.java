@@ -1,6 +1,7 @@
 package net.canvasmod.client;
 
 import net.canvasmod.ExplorationMusicPolicy;
+import net.canvasmod.FamiliarPlaceReturnPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.PlaceFamiliarityPolicy;
 import net.canvasmod.PlaceStatePayload;
@@ -25,6 +26,7 @@ final class CanvasExplorationClient {
     private PlaceFamiliarityPolicy.Kind previous = PlaceFamiliarityPolicy.Kind.NONE;
     private boolean ciAnnounced;
     private CanvasExplorationMusic activeMusic;
+    private final FamiliarPlaceReturnPolicy placeReturns = new FamiliarPlaceReturnPolicy();
 
     CanvasExplorationClient(CanvasFeelClient feel, CanvasExperienceDirector director) {
         this.feel = feel;
@@ -35,7 +37,7 @@ final class CanvasExplorationClient {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             tick++;
             if (CI_VISUAL_TEST && tick >= 230L && !ciAnnounced) {
-                present(PlaceFamiliarityPolicy.Kind.VIEWPOINT);
+                present(PlaceFamiliarityPolicy.Kind.VIEWPOINT, false);
                 System.out.println("CANVAS_CI_EXPLORATION_MUSIC_ACTIVE");
                 ciAnnounced = true;
             }
@@ -43,6 +45,7 @@ final class CanvasExplorationClient {
     }
 
     void resetForWorld() {
+        placeReturns.reset();
         previous = PlaceFamiliarityPolicy.Kind.NONE;
         lastMusicMoment = Long.MIN_VALUE / 4L;
         if (activeMusic != null) {
@@ -54,6 +57,7 @@ final class CanvasExplorationClient {
     void accept(PlaceStatePayload payload) {
         PlaceFamiliarityPolicy.Kind current = parse(payload.kind());
         boolean familiar = payload.isFamiliar();
+        boolean earnedReturn = placeReturns.observe(current, familiar, tick);
         long sinceLast = tick - lastMusicMoment;
 
         if (ExplorationMusicPolicy.shouldPresent(
@@ -65,19 +69,21 @@ final class CanvasExplorationClient {
             String event = ExplorationMusicPolicy.eventFor(current, familiar);
             if (!event.isBlank()
                     && director.allowMoment(MomentDensityPolicy.Kind.EXPLORATION_MUSIC, tick, true)) {
-                present(current);
+                present(current, earnedReturn);
                 lastMusicMoment = tick;
             }
         }
         previous = current;
     }
 
-    private void present(PlaceFamiliarityPolicy.Kind kind) {
+    private void present(PlaceFamiliarityPolicy.Kind kind, boolean earnedReturn) {
         if (activeMusic != null) activeMusic.endImmediately();
         activeMusic = new CanvasExplorationMusic(
                 ExplorationMusicPolicy.eventFor(kind, true),
-                ExplorationMusicPolicy.volumeFor(kind),
-                ExplorationMusicPolicy.pitchFor(kind));
+                FamiliarPlaceReturnPolicy.volume(
+                        ExplorationMusicPolicy.volumeFor(kind), earnedReturn),
+                FamiliarPlaceReturnPolicy.pitch(
+                        ExplorationMusicPolicy.pitchFor(kind), earnedReturn));
         client.getSoundManager().play(activeMusic);
     }
 
