@@ -42,7 +42,7 @@ public final class RareWonderPolicy {
     }
 
     public static boolean rareDay(String contextKey, long worldDay) {
-        long seed = contextKey.hashCode() * 31L + worldDay * 17L;
+        long seed = contextKey.hashCode() * 31L + worldDay * 7L;
         return Math.floorMod(seed, 17L) == 6L;
     }
 
