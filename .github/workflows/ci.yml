@@ -185,6 +185,7 @@ jobs:
           echo "- automated ambience/music/footstep/weather/particle companion admission with incompatible optional mods quarantined"
           echo "- P3 multiplayer scenario campaign: shared settlement, world isolation, gathering, and persisted shared memory"
           echo "- deterministic 30-day long-session density soak"
+          echo "- save/reload/backup/fork lineage isolation and legacy identity migration"
           echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"
 

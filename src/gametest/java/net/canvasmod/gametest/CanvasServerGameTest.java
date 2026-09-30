@@ -1376,6 +1376,69 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.succeed();
     }
 
+    @GameTest
+    public void saveReloadBackupAndForkIdentityRemainSafe(GameTestHelper context) throws Exception {
+        var root = Files.createTempDirectory("canvas-lineage-safety");
+        var originalDir = root.resolve("WorldA").resolve("data");
+        var originalFile = originalDir.resolve("canvas-world-identity-v1.properties");
+
+        CanvasWorldIdentityStore original =
+                new CanvasWorldIdentityStore(originalFile, "WorldA");
+        String worldId = original.worldId();
+        String branchId = original.branchId();
+        String scopeId = original.scopeId();
+
+        CanvasWorldIdentityStore reloaded =
+                new CanvasWorldIdentityStore(originalFile, "WorldA");
+        context.assertTrue(scopeId.equals(reloaded.scopeId()),
+                "Ordinary save/reload must preserve the complete branch scope");
+
+        var backupDir = root.resolve("BackupRestore").resolve("data");
+        Files.createDirectories(backupDir);
+        var backupFile = backupDir.resolve("canvas-world-identity-v1.properties");
+        Files.copy(originalFile, backupFile);
+        CanvasWorldIdentityStore restoredBackup =
+                new CanvasWorldIdentityStore(backupFile, "WorldA");
+        context.assertTrue(scopeId.equals(restoredBackup.scopeId()),
+                "A backup restored under the same save key must retain continuity");
+
+        var forkDir = root.resolve("WorldB").resolve("data");
+        Files.createDirectories(forkDir);
+        var forkFile = forkDir.resolve("canvas-world-identity-v1.properties");
+        Files.copy(originalFile, forkFile);
+        CanvasWorldIdentityStore fork =
+                new CanvasWorldIdentityStore(forkFile, "WorldB");
+        context.assertTrue(worldId.equals(fork.worldId()),
+                "A fork should retain world lineage");
+        context.assertFalse(branchId.equals(fork.branchId()),
+                "A fork under a different save key must receive a new branch identity");
+        context.assertFalse(scopeId.equals(fork.scopeId()),
+                "Forked worlds must not share client-memory scope");
+
+        var legacyDir = root.resolve("Legacy").resolve("data");
+        Files.createDirectories(legacyDir);
+        var legacyFile = legacyDir.resolve("canvas-world-identity-v1.properties");
+        java.util.Properties legacy = new java.util.Properties();
+        legacy.setProperty("worldId", worldId);
+        try (var out = Files.newOutputStream(legacyFile)) {
+            legacy.store(out, "legacy v1");
+        }
+        CanvasWorldIdentityStore migrated =
+                new CanvasWorldIdentityStore(legacyFile, "Legacy");
+        context.assertTrue(worldId.equals(migrated.worldId()),
+                "Legacy v1 identity migration must preserve world lineage");
+        context.assertTrue(!migrated.branchId().isBlank(),
+                "Legacy v1 identity migration must allocate a branch identity");
+
+        Files.walk(root)
+                .sorted(java.util.Comparator.reverseOrder())
+                .forEach(path -> {
+                    try { Files.deleteIfExists(path); }
+                    catch (java.io.IOException ignored) { }
+                });
+        context.succeed();
+    }
+
     @Override
     public void invokeTestMethod(GameTestHelper context, Method method) throws ReflectiveOperationException {
         method.invoke(this, context);

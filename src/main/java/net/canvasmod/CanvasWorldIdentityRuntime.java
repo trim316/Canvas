@@ -11,16 +11,27 @@ final class CanvasWorldIdentityRuntime {
 
     void onServerStarting(MinecraftServer server) {
         Path root = server.getWorldPath(LevelResource.ROOT);
+        Path name = root.getFileName();
+        String saveKey = name == null ? "default" : name.toString();
         store = new CanvasWorldIdentityStore(
-                root.resolve("data").resolve("canvas-world-identity-v1.properties"));
+                root.resolve("data").resolve("canvas-world-identity-v1.properties"),
+                saveKey);
     }
 
     void syncPlayer(ServerPlayer player) {
         if (store == null) return;
-        ServerPlayNetworking.send(player, new WorldIdentityPayload(store.worldId()));
+        ServerPlayNetworking.send(player, new WorldIdentityPayload(store.scopeId()));
     }
 
     String worldId() {
         return store == null ? "" : store.worldId();
+    }
+
+    String branchId() {
+        return store == null ? "" : store.branchId();
+    }
+
+    String scopeId() {
+        return store == null ? "" : store.scopeId();
     }
 }
