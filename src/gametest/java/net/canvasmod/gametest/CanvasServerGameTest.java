@@ -18,6 +18,8 @@ import net.canvasmod.RareWonderPolicy;
 import net.canvasmod.ExplorationWonderMemoryStore;
 import net.canvasmod.SharedSettlementPolicy;
 import net.canvasmod.SharedSettlementStore;
+import net.canvasmod.CanvasWorldIdentityStore;
+import net.canvasmod.WorldMemoryScopePolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -1117,6 +1119,48 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
 
         Files.deleteIfExists(file);
         Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
+    @GameTest
+    public void worldIdentityPersistsAcrossReload(GameTestHelper context) throws Exception {
+        var dir = Files.createTempDirectory("canvas-world-identity-test");
+        var file = dir.resolve("world.properties");
+
+        CanvasWorldIdentityStore first = new CanvasWorldIdentityStore(file);
+        String id = first.worldId();
+        CanvasWorldIdentityStore reloaded = new CanvasWorldIdentityStore(file);
+
+        context.assertTrue(!id.isBlank(),
+                "World identity must never be blank");
+        context.assertTrue(id.equals(reloaded.worldId()),
+                "World identity must remain stable across reload");
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
+    @GameTest
+    public void worldMemoryScopesPreventCrossWorldLeakage(GameTestHelper context) {
+        String localHome = "minecraft:overworld|10|64|20";
+        String worldA = "11111111-1111-1111-1111-111111111111";
+        String worldB = "22222222-2222-2222-2222-222222222222";
+
+        String aHome = WorldMemoryScopePolicy.scope(worldA, localHome);
+        String bHome = WorldMemoryScopePolicy.scope(worldB, localHome);
+        context.assertFalse(aHome.equals(bHome),
+                "Identical HOME coordinates in different worlds must not share memory");
+
+        String aMob = WorldMemoryScopePolicy.mobPrefix(worldA)
+                + "00000000-0000-0000-0000-000000000001.ticks";
+        String bMob = WorldMemoryScopePolicy.mobPrefix(worldB)
+                + "00000000-0000-0000-0000-000000000001.ticks";
+        context.assertFalse(aMob.equals(bMob),
+                "Identical mob UUIDs in different worlds must not share familiarity");
+
+        context.assertTrue(WorldMemoryScopePolicy.scope("", localHome).isBlank(),
+                "Memory must fail closed until a stable world identity is known");
         context.succeed();
     }
 
