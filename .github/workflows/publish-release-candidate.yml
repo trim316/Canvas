@@ -1,0 +1,114 @@
+name: Publish validated Canvas release candidate
+
+# This workflow never publishes a stable release. It distributes the EXACT
+# bundle produced by the successful full Minecraft CI run on current main.
+# The stable 0.2.0 release remains blocked on documented real Windows FEEL,
+# low-end, forever-world backup/restore, and multiplayer acceptance.
+on:
+  workflow_run:
+    workflows: ["Canvas 26.2 CI"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: canvas-release-candidate
+  cancel-in-progress: false
+
+jobs:
+  publish_rc:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'push' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout the exact proven main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - name: Bind to current main and fetch the exact audited artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          CURRENT_MAIN="$(gh api "repos/$REPOSITORY/commits/main" --jq .sha)"
+          test "$CURRENT_MAIN" = "$TESTED_SHA" || {
+            echo "Main advanced; refusing to publish stale candidate $TESTED_SHA"
+            exit 1
+          }
+          mkdir -p published
+          gh run download "$RUN_ID" --repo "$REPOSITORY" \
+            --name canvas-26.2-proven-bundle --dir published
+          test -s published/Canvas-26.2-PROVEN.zip
+          test -s published/RELEASE-AUDIT.json
+
+      - name: Independently reopen the delivered candidate and audit its hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_bundle.py published/Canvas-26.2-PROVEN.zip
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          bundle = Path("published/Canvas-26.2-PROVEN.zip")
+          receipt = json.loads(Path("published/RELEASE-AUDIT.json").read_text())
+          actual = hashlib.sha256(bundle.read_bytes()).hexdigest()
+          assert receipt.get("schema") == 1
+          assert receipt.get("release_version") == "0.2.0-rc.1"
+          assert receipt.get("minecraft") == "26.2"
+          assert receipt.get("proven_bundle", {}).get("sha256") == actual
+          assert all(receipt.get("checks", {}).values()), "Audit receipt contains a failed check"
+          Path("published/CANVAS-26.2-SHA256SUMS.txt").write_text(
+              actual + "  Canvas-26.2-PROVEN.zip\n")
+          PY
+
+      - name: Publish immutable-SHA candidate as a GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TESTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v0.2.0-rc.1.${TESTED_SHA:0:12}"
+          # Each verified commit has at most one prerelease: a rerun never
+          # replaces a previously published binary without audit.
+          if gh release view "$TAG" --repo "$REPOSITORY" >/dev/null 2>&1; then
+            echo "Already published immutable candidate $TAG"
+            exit 0
+          fi
+          cat > published/RELEASE-NOTES.md <<EOF
+          # Canvas 0.2.0 release candidate for Minecraft 26.2 Fabric
+
+          This is a **prerelease for backed-up Windows playtesting**, not a
+          final certified release. It is built from exact commit $TESTED_SHA,
+          successfully validated in full hosted Minecraft CI run $RUN_ID.
+
+          The ZIP contains the production Canvas runtime, exact admitted
+          companion mod stack, verification manifest, install and restore
+          commands, and machine audit receipts. Use a disposable or backed-up
+          Modrinth Fabulously Optimized profile. Read RELEASE-ACCEPTANCE.md
+          before testing.
+
+          **Still required for a stable release:** hands-on Windows install
+          and rollback, long-play feel and low-end frametime observations,
+          backed-up forever-world restore, and multiplayer experiential tests.
+          CI does not prove those subjective or hardware-specific outcomes.
+          EOF
+          gh release create "$TAG" \
+            published/Canvas-26.2-PROVEN.zip \
+            published/RELEASE-AUDIT.json \
+            published/CANVAS-26.2-SHA256SUMS.txt \
+            --repo "$REPOSITORY" --target "$TESTED_SHA" \
+            --title "Canvas 0.2.0 release candidate (${TESTED_SHA:0:12})" \
+            --notes-file published/RELEASE-NOTES.md \
+            --prerelease --latest=false
