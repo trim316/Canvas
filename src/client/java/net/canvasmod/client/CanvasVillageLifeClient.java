@@ -37,6 +37,7 @@ final class CanvasVillageLifeClient {
     private final VillageContinuityPolicy continuity = new VillageContinuityPolicy();
     private final VillageAfterRainPolicy afterRain = new VillageAfterRainPolicy();
     private Object observedLevel;
+    private long observedLevelSinceTick;
     private int presentationTicks;
     private boolean ciAnnounced;
 
@@ -72,13 +73,18 @@ final class CanvasVillageLifeClient {
             continuity.reset();
             afterRain.reset();
             observedLevel = client.level;
+            observedLevelSinceTick = tick;
             rhythm = VillageLifePolicy.Rhythm.NONE;
             director.setVillageRhythm(rhythm);
             presentationTicks = 0;
         }
 
         VillageLifePolicy.Rhythm next;
-        if (CI_VISUAL_TEST && tick >= 100L && tick < 180L) {
+        // CI presentation timing must be relative to the playable world, not
+        // process startup. Slow/constrained hosts can spend well over 180
+        // client ticks loading before a level/player exists.
+        long levelAgeTicks = Math.max(0L, tick - observedLevelSinceTick);
+        if (CI_VISUAL_TEST && levelAgeTicks < 100L) {
             next = VillageLifePolicy.Rhythm.GATHERING;
             if (!ciAnnounced) {
                 System.out.println("CANVAS_CI_VILLAGE_RHYTHM_ACTIVE");
