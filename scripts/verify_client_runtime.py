@@ -84,6 +84,8 @@ if "CANVAS_CI_WEATHER_CHARACTER_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas weather-character presentation")
 if "CANVAS_CI_SEASONAL_RARE_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas seasonal rare-moment presentation")
+if "CANVAS_CI_WORLD_IDENTITY_ACTIVE" not in game_test_text:
+    raise SystemExit("client GameTest never received Canvas world identity")
 if "CANVAS_CI_EXPLORATION_MUSIC_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas exploration music presentation")
 if "CANVAS_CI_EXPLORATION_WEATHER_ACTIVE" not in game_test_text:
