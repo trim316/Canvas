@@ -114,6 +114,12 @@ def main() -> None:
            one_shot(5.6, [(98.0,.070),(130.81,.052),(196.0,.030),(293.66,.014)], .13))
     encode(ROOT / "cues/exploration_field_after_rain.ogg",
            one_shot(5.0, [(196.0,.055),(246.94,.044),(329.63,.032),(493.88,.014)], .17))
+    encode(ROOT / "cues/wonder_horizon_glow.ogg",
+           one_shot(6.0, [(220.0,.060),(293.66,.047),(392.0,.034),(587.33,.015)], .11))
+    encode(ROOT / "cues/wonder_harbor_hush.ogg",
+           one_shot(6.4, [(110.0,.060),(146.83,.045),(196.0,.030),(293.66,.013)], .10))
+    encode(ROOT / "cues/wonder_golden_field.ogg",
+           one_shot(5.8, [(196.0,.058),(261.63,.046),(329.63,.032),(523.25,.014)], .12))
 
     encode(ROOT / "music/coming_home.ogg",
            music_moment(14.0, [(130.81,.075),(164.81,.066),(196.0,.052),(261.63,.028)], .11, .45))
