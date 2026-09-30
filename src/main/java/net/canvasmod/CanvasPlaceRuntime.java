@@ -74,13 +74,34 @@ final class CanvasPlaceRuntime {
             save();
         }
 
-        boolean familiarNow = alreadyKnown(
+        PlaceMemory knownPlace = findKnown(
                 state.places,
                 kind,
                 dimension,
                 player.getX(),
                 player.getY(),
                 player.getZ());
+        boolean familiarNow = knownPlace != null;
+        if (knownPlace == null) {
+            state.landmarks.observe("", kind, tick);
+        } else {
+            String landmarkKey = LandmarkRecognitionPolicy.landmarkKey(
+                    knownPlace.kind(),
+                    knownPlace.dimension(),
+                    knownPlace.x(),
+                    knownPlace.y(),
+                    knownPlace.z());
+            LandmarkFamiliarityTracker.Observation landmarkObservation =
+                    state.landmarks.observe(landmarkKey, knownPlace.kind(), tick);
+            if (landmarkObservation.becameLandmark()) {
+                evidence("landmark_recognized", player.getUUID().toString(),
+                        "tick=" + tick
+                                + ",kind=" + knownPlace.kind()
+                                + ",key=" + landmarkObservation.key()
+                                + ",visits=" + landmarkObservation.visits());
+                save();
+            }
+        }
         sendPlaceState(player, state, kind, familiarNow);
 
         boolean recognized = state.accumulator.observe(
@@ -113,7 +134,15 @@ final class CanvasPlaceRuntime {
             return;
         }
 
-        state.places.add(new PlaceMemory(kind, dimension, x, y, z));
+        PlaceMemory newPlace = new PlaceMemory(kind, dimension, x, y, z);
+        state.places.add(newPlace);
+        String landmarkKey = LandmarkRecognitionPolicy.landmarkKey(
+                newPlace.kind(),
+                newPlace.dimension(),
+                newPlace.x(),
+                newPlace.y(),
+                newPlace.z());
+        state.landmarks.observe(landmarkKey, newPlace.kind(), tick);
         sendPlaceState(player, state, kind, true);
         evidence("place_recognized", player.getUUID().toString(),
                 "tick=" + tick + "," + placeEvidence.summary()
@@ -124,6 +153,25 @@ final class CanvasPlaceRuntime {
         save();
     }
 
+    private static PlaceMemory findKnown(
+            List<PlaceMemory> places,
+            PlaceFamiliarityPolicy.Kind kind,
+            String dimension,
+            double x,
+            double y,
+            double z) {
+        if (kind == null || kind == PlaceFamiliarityPolicy.Kind.NONE) return null;
+        for (PlaceMemory place : places) {
+            if (PlaceFamiliarityPolicy.samePlace(
+                    place.kind(), place.dimension(), place.x(), place.y(), place.z(),
+                    kind, dimension, x, y, z,
+                    PlaceFamiliarityPolicy.DUPLICATE_RADIUS_SQ)) {
+                return place;
+            }
+        }
+        return null;
+    }
+
     private static boolean alreadyKnown(
             List<PlaceMemory> places,
             PlaceFamiliarityPolicy.Kind kind,
@@ -131,16 +179,7 @@ final class CanvasPlaceRuntime {
             double x,
             double y,
             double z) {
-        if (kind == null || kind == PlaceFamiliarityPolicy.Kind.NONE) return false;
-        for (PlaceMemory place : places) {
-            if (PlaceFamiliarityPolicy.samePlace(
-                    place.kind(), place.dimension(), place.x(), place.y(), place.z(),
-                    kind, dimension, x, y, z,
-                    PlaceFamiliarityPolicy.DUPLICATE_RADIUS_SQ)) {
-                return true;
-            }
-        }
-        return false;
+        return findKnown(places, kind, dimension, x, y, z) != null;
     }
 
     private static void sendPlaceState(
@@ -182,6 +221,16 @@ final class CanvasPlaceRuntime {
                 properties.setProperty(routeKey + "key", route.getKey());
                 properties.setProperty(routeKey + "traversals", Integer.toString(route.getValue()));
                 routeIndex++;
+            }
+
+            var landmarks = entry.getValue().landmarks.visits();
+            properties.setProperty(prefix + ".landmark.count", Integer.toString(landmarks.size()));
+            int landmarkIndex = 0;
+            for (var landmark : landmarks.entrySet()) {
+                String landmarkKey = prefix + ".landmark." + landmarkIndex + ".";
+                properties.setProperty(landmarkKey + "key", landmark.getKey());
+                properties.setProperty(landmarkKey + "visits", Integer.toString(landmark.getValue()));
+                landmarkIndex++;
             }
         }
 
@@ -243,6 +292,18 @@ final class CanvasPlaceRuntime {
                             properties.getProperty(routeKey + "traversals", "0"));
                     state.routes.restore(segment, traversals);
                 }
+
+                int landmarkCount = Math.min(
+                        LandmarkRecognitionPolicy.MAX_LANDMARKS,
+                        Math.max(0, Integer.parseInt(
+                                properties.getProperty(prefix + ".landmark.count", "0"))));
+                for (int i = 0; i < landmarkCount; i++) {
+                    String landmarkKey = prefix + ".landmark." + i + ".";
+                    String memoryKey = properties.getProperty(landmarkKey + "key", "");
+                    int visits = Integer.parseInt(
+                            properties.getProperty(landmarkKey + "visits", "0"));
+                    state.landmarks.restore(memoryKey, visits);
+                }
             } catch (IllegalArgumentException ignored) { }
         }
     }
@@ -268,6 +329,7 @@ final class CanvasPlaceRuntime {
     private static final class State {
         final PlaceRecognitionAccumulator accumulator = new PlaceRecognitionAccumulator();
         final RouteFamiliarityTracker routes = new RouteFamiliarityTracker();
+        final LandmarkFamiliarityTracker landmarks = new LandmarkFamiliarityTracker();
         final List<PlaceMemory> places = new ArrayList<>();
         String lastPayloadKey = "";
     }
