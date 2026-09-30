@@ -65,8 +65,6 @@ with zipfile.ZipFile(bundle) as z:
             raise SystemExit(f"manifest SHA mismatch: {rel}")
         if hashes.get(rel) != digest:
             raise SystemExit(f"SHA256SUMS mismatch: {rel}")
-        with zipfile.ZipFile(pathlib.Path("/dev/null"), "w"):
-            pass
         import io
         with zipfile.ZipFile(io.BytesIO(payload)) as jar:
             meta = json.loads(jar.read("fabric.mod.json").decode("utf-8"))
