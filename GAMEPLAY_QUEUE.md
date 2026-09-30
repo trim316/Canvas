@@ -131,6 +131,48 @@ reversible, low-overhead, and compatible with vanilla player-authored worlds.
 - Nether and End equivalent context semantics where evidence is reliable;
   UNKNOWN rather than invented interpretation otherwise.
 
+
+## P10 — The homestead feels inhabited (new independent tranche)
+
+- [ ] READY G21: Recognize a *lived-in* home only after separate meaningful returns on separate Minecraft days, not merely repeat cues in one session. Extend world-scoped home memory and HomecomingPolicy; fallback to current QUIET/FAMILIAR/VILLAGE behavior. GameTest: multiple same-day returns do not simulate established history; save/reload preserves legitimate progress.
+- [ ] READY G22: Make an authored greenhouse or covered growing area feel quieter during rain **only** when loaded domestic evidence and shelter support that interpretation. Reuse HomeEvidenceDetector and current rain ambience; unknown structures stay generic. GameTest: open farm, natural cave, roofed bed/work area, and unloaded edges.
+- [ ] READY G23: Give first-light-at-home a subtle one-time-per-morning environmental transition after a genuine overnight presence, using existing home-morning sound. No alarm, notifications or forced sleep. GameTest: time skips, reconnects, and repeated loaded ticks never spam cues.
+- [ ] READY G24: Detect a repeated return to a player-built dock/harbor and slightly adapt the existing exploration ambience with stored place familiarity, not boat-specific invented structures. GameTest: harbor-qualified authored evidence and repeated visits vs open shoreline; no chunk loads.
+- [ ] READY G25: Make long, undisturbed evenings at home permit longer quiet intervals, while preserving accessibility and weather transitions. Tune existing moment-budget/home phase policies rather than adding content. GameTest: long idle, sudden storm, return cue, and no-sound-on-disable.
+
+## P11 — Seasonal rhythm without seasonal chores
+
+- [ ] READY G26: Seasonal village wake-up variation that uses already-known village and season states, existing approved cues, and no villager scheduling changes. GameTest: spring/winter present differently, UNKNOWN season retains ordinary village rhythm.
+- [ ] READY G27: Make first genuine autumn evening in an established home a rare atmospheric micro-moment using existing seasonal audio, not a checklist or popup. Persist once-per-season/world scope. GameTest: saves, dimension changes, and duplicated server packets cannot replay it.
+- [ ] READY G28: When a known home experiences consecutive rainy visits, vary rain ambience subtly without increasing total loudness or manufacturing weather. GameTest: repeated rain, sheltered/exposed changes, and cooldown behavior.
+- [ ] READY G29: Give a familiar domestic animal's spring reappearance a very restrained old-friend accent *after* the animal has actually been absent; extend familiarity memory, no behavioral control. GameTest: false absences due to unloaded chunks do not create a reunion.
+- [ ] READY G30: Preserve seasonal sound continuity across portal trips and returns: suppress seasonal Overworld audio in Nether/End and resume only once the same world-scoped home is confirmed. Client GameTest: rapid dimension crossing and stale packets.
+
+## P12 — Quiet discovery and shared world character
+
+- [ ] READY G31: Add a rare 'recognize this route' return moment once the existing RouteFamiliarityTracker has sustained evidence, reusing available approved audio rather than map markers or generated trails. GameTest: one-off visit vs established path, world fork isolation, throttling.
+- [ ] READY G32: Recognize a player-built overlook after repeated observation from a stable loaded position and nearby authored evidence, without scanning distant terrain. Use existing place/landmark engine; GameTest: real dwell vs fly-by and unloaded boundary.
+- [ ] READY G33: Add restrained twilight exploration ambience for known player-authored places, distinct from first-discovery wonder. Use current exploration music budget and sound assets; GameTest: no additional music when another moment is active.
+- [ ] READY G34: Make multiplayer return to a shared settlement recognize *shared* context without disclosing another player's private familiarity records. Use current shared settlement/world-memory payloads; GameTest: two players, private records unchanged, dimension separation.
+- [ ] READY G35: Give a repeated visit to an authored gathering spot a subtle sense of anticipation **only when vanilla villagers are actually present**, not via new festivals, calendar mechanics or spawned entities. GameTest: empty settlement, loaded villagers, repeated events/cooldown.
+
+## P13 — Cohesive vanilla+ presentation and release feel
+
+- [ ] READY G36: Introduce an optional low-intensity presentation mode for players sensitive to repeated HUD pulses while preserving recognition and existing audio. Extend independent feature configuration safely; GameTest: pulse alpha and disabled/normal modes; never modify global game settings.
+- [ ] READY G37: Prioritize dialogue-free environmental sound over repeated Canvas system-chat narration after first discovery of home/landmark/familiar face. Persist acknowledgement per world branch; GameTest: no chatter on reconnect or fork-leak.
+- [ ] READY G38: Make cross-feature music arbitration coherent when homecoming, village rhythm, and exploration discoveries coincide; use a single pre-existing moment budget and defer or suppress lower-salience music without introducing another music player. GameTest: deterministic simultaneous triggers, no overlap.
+- [ ] READY G39: Tune low-end visual overlays to fade rather than layer competing weather, seasonal and rare-event full-screen washes; retain existing coloring and never override Minecraft's own render settings. Client test: multiple concurrent overlays and bounded composite alpha.
+- [ ] READY G40: Ensure an all-features-off configuration produces ordinary vanilla gameplay with no residual looping Canvas audio, overlays, network-driven presentation, or persistent recognition writes. Client/server integration acceptance: off/on/off toggle across restart, world swap, and weather change.
+
+## New tranche handoff
+
+Treat G21–G40 as an additional pool, not a reason to leave G01–G20 unfinished.
+Whenever fewer than 10 total items across both tranches are independently READY,
+derive more precise gameplay slices from playtest evidence and the product pillars
+(Home, Seasons, Village, Familiar Vanilla Mobs, Travel, Weather, Sound, Wonder,
+Multiplayer, World Memory). Avoid duplicate work, unsupported mod claims, and
+new build-system development. Implement one cohesive playable change per branch.
+
 ## Release acceptance still required
 
 Manual Windows Modrinth profile test, long-play FPS/stutter, forever-world
