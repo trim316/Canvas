@@ -16,6 +16,8 @@ import net.canvasmod.LandmarkRecognitionPolicy;
 import net.canvasmod.LandmarkFamiliarityTracker;
 import net.canvasmod.RareWonderPolicy;
 import net.canvasmod.ExplorationWonderMemoryStore;
+import net.canvasmod.SharedSettlementPolicy;
+import net.canvasmod.SharedSettlementStore;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -1024,6 +1026,94 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 "Wonder cooldown day must survive reload");
         context.assertTrue(snapshot.moments() == 2,
                 "Per-landmark wonder history must survive reload");
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
+    @GameTest
+    public void sharedSettlementRecognitionClustersNearbySemanticHomes(GameTestHelper context) {
+        var homes = java.util.List.of(
+                new SharedSettlementPolicy.HomeAnchor(
+                        java.util.UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                        "minecraft:overworld", 0.0, 64.0, 0.0),
+                new SharedSettlementPolicy.HomeAnchor(
+                        java.util.UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                        "minecraft:overworld", 60.0, 66.0, 20.0));
+
+        var settlements = SharedSettlementPolicy.detect(homes);
+        context.assertTrue(settlements.size() == 1,
+                "Two nearby durable HOME anchors should form one shared settlement");
+        context.assertTrue(settlements.get(0).members().size() == 2,
+                "Shared settlement membership should include both distinct players");
+        context.succeed();
+    }
+
+    @GameTest
+    public void sharedSettlementRecognitionKeepsDimensionsAndDistanceSeparate(GameTestHelper context) {
+        var homes = java.util.List.of(
+                new SharedSettlementPolicy.HomeAnchor(
+                        java.util.UUID.fromString("00000000-0000-0000-0000-000000000011"),
+                        "minecraft:overworld", 0.0, 64.0, 0.0),
+                new SharedSettlementPolicy.HomeAnchor(
+                        java.util.UUID.fromString("00000000-0000-0000-0000-000000000012"),
+                        "minecraft:the_nether", 10.0, 64.0, 10.0),
+                new SharedSettlementPolicy.HomeAnchor(
+                        java.util.UUID.fromString("00000000-0000-0000-0000-000000000013"),
+                        "minecraft:overworld", 300.0, 64.0, 0.0));
+
+        context.assertTrue(SharedSettlementPolicy.detect(homes).isEmpty(),
+                "Different dimensions or distant homes must not be merged into a settlement");
+        context.succeed();
+    }
+
+    @GameTest
+    public void sharedSettlementRecognitionSupportsConnectedNeighborhoods(GameTestHelper context) {
+        var homes = java.util.List.of(
+                new SharedSettlementPolicy.HomeAnchor(
+                        java.util.UUID.fromString("00000000-0000-0000-0000-000000000021"),
+                        "minecraft:overworld", 0.0, 64.0, 0.0),
+                new SharedSettlementPolicy.HomeAnchor(
+                        java.util.UUID.fromString("00000000-0000-0000-0000-000000000022"),
+                        "minecraft:overworld", 80.0, 64.0, 0.0),
+                new SharedSettlementPolicy.HomeAnchor(
+                        java.util.UUID.fromString("00000000-0000-0000-0000-000000000023"),
+                        "minecraft:overworld", 160.0, 64.0, 0.0));
+
+        var settlements = SharedSettlementPolicy.detect(homes);
+        context.assertTrue(settlements.size() == 1,
+                "Connected nearby HOME anchors should form one settlement component");
+        context.assertTrue(settlements.get(0).members().size() == 3,
+                "Transitive settlement clustering should preserve all three members");
+        context.succeed();
+    }
+
+    @GameTest
+    public void sharedSettlementStorePreservesStableIdentityAcrossReloadAndDrift(GameTestHelper context) throws Exception {
+        var dir = Files.createTempDirectory("canvas-settlement-store-test");
+        var file = dir.resolve("settlements.properties");
+        var members = java.util.List.of(
+                java.util.UUID.fromString("00000000-0000-0000-0000-000000000031"),
+                java.util.UUID.fromString("00000000-0000-0000-0000-000000000032"));
+
+        SharedSettlementStore first = new SharedSettlementStore(file);
+        var created = first.reconcile(java.util.List.of(
+                new SharedSettlementPolicy.Candidate(
+                        "minecraft:overworld", 40.0, 65.0, 40.0, members)));
+        context.assertTrue(created.size() == 1,
+                "First shared settlement observation should allocate a stable ID");
+        String id = created.get(0).id();
+
+        SharedSettlementStore reloaded = new SharedSettlementStore(file);
+        var recreated = reloaded.reconcile(java.util.List.of(
+                new SharedSettlementPolicy.Candidate(
+                        "minecraft:overworld", 52.0, 65.0, 48.0, members)));
+        context.assertTrue(recreated.isEmpty(),
+                "Small settlement centroid drift should reuse the persisted identity");
+        context.assertTrue(reloaded.settlements().size() == 1
+                        && reloaded.settlements().get(0).id().equals(id),
+                "Settlement identity must survive reload and modest spatial drift");
 
         Files.deleteIfExists(file);
         Files.deleteIfExists(dir);
