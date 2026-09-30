@@ -28,6 +28,7 @@ import net.canvasmod.CanvasFeatureConfig;
 import net.canvasmod.LongSessionSoakPolicy;
 import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.VillageLifePolicy;
+import net.canvasmod.VillageContinuityPolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.HomeEvidenceDetector;
@@ -1544,6 +1545,35 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.assertTrue(SeasonalHomecomingPolicy.adapt(
                         quiet, SeasonPolicy.Season.WINTER, 3, 3).equals(quiet),
                 "Quiet HOME must remain quiet: no seasonal musical reward without context");
+        context.succeed();
+    }
+
+    @GameTest
+    public void villageMusicRequiresSustainedLoadedPresence(GameTestHelper context) {
+        VillageContinuityPolicy policy = new VillageContinuityPolicy();
+        context.assertTrue(policy.observe(VillageLifePolicy.Rhythm.WAKE) == VillageLifePolicy.Rhythm.NONE,
+                "A passing morning villager crowd must not create a village moment");
+        context.assertTrue(policy.observe(VillageLifePolicy.Rhythm.WAKE) == VillageLifePolicy.Rhythm.NONE,
+                "Two samples are still insufficient for sustained village identity");
+        context.assertTrue(policy.observe(VillageLifePolicy.Rhythm.WAKE) == VillageLifePolicy.Rhythm.WAKE,
+                "Repeated loaded village presence should earn a morning presentation");
+
+        context.assertTrue(policy.observe(VillageLifePolicy.Rhythm.GATHERING) == VillageLifePolicy.Rhythm.WAKE,
+                "A single fleeting gathering must not replace an established village rhythm");
+        context.assertTrue(policy.observe(VillageLifePolicy.Rhythm.WIND_DOWN) == VillageLifePolicy.Rhythm.WAKE,
+                "A contradicted gathering must not mature");
+        context.assertTrue(policy.observe(VillageLifePolicy.Rhythm.WIND_DOWN) == VillageLifePolicy.Rhythm.WAKE,
+                "Changing rhythm needs multiple consistent observations");
+        context.assertTrue(policy.observe(VillageLifePolicy.Rhythm.WIND_DOWN) == VillageLifePolicy.Rhythm.WIND_DOWN,
+                "Sustained evening presence should create a genuine wind-down");
+
+        context.assertTrue(policy.observe(VillageLifePolicy.Rhythm.NONE) == VillageLifePolicy.Rhythm.NONE,
+                "Villagers leaving loaded range must stop the previous village identity immediately");
+        context.assertTrue(policy.observe(VillageLifePolicy.Rhythm.GATHERING) == VillageLifePolicy.Rhythm.NONE,
+                "A reconnect or absent village cannot inherit former presentation history");
+        policy.reset();
+        context.assertTrue(policy.observe(null) == VillageLifePolicy.Rhythm.NONE,
+                "Unknown observations must fail closed into silence");
         context.succeed();
     }
 
