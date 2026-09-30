@@ -22,6 +22,7 @@ import net.canvasmod.CanvasWorldIdentityStore;
 import net.canvasmod.WorldMemoryScopePolicy;
 import net.canvasmod.SharedGatheringPolicy;
 import net.canvasmod.SharedWorldMemoryStore;
+import net.canvasmod.P3MultiplayerScenarioPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -1225,6 +1226,43 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 "Latest shared gathering tick must survive reload");
         context.assertTrue(reloaded.snapshot("unknown").communityGatherings() == 0,
                 "Unknown settlements must remain unknown rather than inheriting another settlement's history");
+
+        Files.deleteIfExists(file);
+        Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
+    @GameTest
+    public void p3MultiplayerScenarioCampaignCoversSettlementIsolationGatheringAndSharedMemory(GameTestHelper context) throws Exception {
+        var a = java.util.UUID.fromString("00000000-0000-0000-0000-000000000201");
+        var b = java.util.UUID.fromString("00000000-0000-0000-0000-000000000202");
+        var homes = java.util.List.of(
+                new SharedSettlementPolicy.HomeAnchor(a, "minecraft:overworld", 0.0, 64.0, 0.0),
+                new SharedSettlementPolicy.HomeAnchor(b, "minecraft:overworld", 48.0, 64.0, 16.0));
+        var online = java.util.List.of(
+                new SharedGatheringPolicy.PlayerPresence(a, "minecraft:overworld", 22.0, 64.0, 8.0),
+                new SharedGatheringPolicy.PlayerPresence(b, "minecraft:overworld", 28.0, 64.0, 9.0));
+
+        var result = P3MultiplayerScenarioPolicy.evaluate(
+                homes,
+                "11111111-1111-1111-1111-111111111111",
+                "22222222-2222-2222-2222-222222222222",
+                "minecraft:overworld|24|64|8",
+                online);
+        context.assertTrue(result.passed(),
+                "P3 multiplayer campaign must prove shared settlement, cross-world isolation, and gathering interpretation");
+
+        var dir = Files.createTempDirectory("canvas-p3-multiplayer-campaign");
+        var file = dir.resolve("shared-memory.properties");
+        SharedWorldMemoryStore first = new SharedWorldMemoryStore(file);
+        first.noteSettlement("canvas-settlement-campaign");
+        first.noteGathering("canvas-settlement-campaign", 3600L);
+        SharedWorldMemoryStore reloaded = new SharedWorldMemoryStore(file);
+        var memory = reloaded.snapshot("canvas-settlement-campaign");
+        context.assertTrue(memory.recognizedSettlements() == 1
+                        && memory.communityGatherings() == 1
+                        && memory.lastGatheringTick() == 3600L,
+                "P3 multiplayer campaign must prove shared observational history survives reload");
 
         Files.deleteIfExists(file);
         Files.deleteIfExists(dir);
