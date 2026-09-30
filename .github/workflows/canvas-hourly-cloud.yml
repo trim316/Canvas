@@ -1,0 +1,110 @@
+name: Canvas Hourly Cloud Continuity
+
+# Mirrors OceanCanvas's hosted audit/test layer. This does not run a coding agent.
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/canvas-hourly-cloud.yml'
+      - 'scripts/ci/cloud-continuity-audit.py'
+      - 'POST_RC_QUEUE.md'
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: canvas-hourly-cloud-continuity
+  cancel-in-progress: false
+
+jobs:
+  independent-audit:
+    name: Hosted backlog and development continuity evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Capture exact audited source identity
+        run: git rev-parse HEAD | tee CLOUD_SOURCE_SHA.txt
+      - name: Inspect work queue, PRs and active validation
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/ci/cloud-continuity-audit.py 2>&1 | tee cloud-continuity-console.log
+      - name: Preserve every audit result, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canvas-cloud-continuity
+          path: |
+            CLOUD_SOURCE_SHA.txt
+            cloud-continuity-console.log
+            cloud-continuity-evidence/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Summarize audit
+        if: always()
+        shell: bash
+        run: |
+          echo "## Canvas cloud continuity" >> "$GITHUB_STEP_SUMMARY"
+          echo "Source: $(cat CLOUD_SOURCE_SHA.txt 2>/dev/null || echo unknown)" >> "$GITHUB_STEP_SUMMARY"
+          if test -f cloud-continuity-evidence/continuity.json; then
+            python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          x=json.load(open('cloud-continuity-evidence/continuity.json'))
+          print('Verdict: **'+x['verdict']+'**')
+          print('Independently READY items: '+str(x['queue'].get('ready_count',0)))
+          print('Open PRs: '+str(len(x['pull_requests'])))
+          print('Active CI runs: '+str(len(x['active_runs'])))
+          for issue in x['warnings']+x['errors']:
+              print('- '+issue)
+          PY
+          fi
+
+  independent-core-gates:
+    name: Hosted deterministic Canvas source regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Capture exact tested source identity
+        run: git rev-parse HEAD | tee CLOUD_TEST_SOURCE_SHA.txt
+      - name: Run invariant and companion-matrix gates
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 scripts/verify_invariants.py 2>&1 | tee cloud-invariants.log
+          python3 scripts/verify_compatibility_matrix.py 2>&1 | tee cloud-compatibility.log
+      - name: Run offline distribution regressions when integrated
+        shell: bash
+        run: |
+          set -o pipefail
+          if test -f scripts/test_bundle_integrity.py; then
+            python3 scripts/test_bundle_integrity.py 2>&1 | tee cloud-bundle.log
+          fi
+          if test -f scripts/test_artifact_provenance.py; then
+            python3 scripts/test_artifact_provenance.py 2>&1 | tee cloud-provenance.log
+          fi
+      - name: Preserve independent regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canvas-cloud-regressions
+          path: |
+            CLOUD_TEST_SOURCE_SHA.txt
+            cloud-invariants.log
+            cloud-compatibility.log
+            cloud-bundle.log
+            cloud-provenance.log
+          if-no-files-found: warn
+          retention-days: 30
