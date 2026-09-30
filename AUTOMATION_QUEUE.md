@@ -52,7 +52,7 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Multiplayer evidence campaign. Implemented in alpha.29 with an end-to-end deterministic GameTest covering shared settlement formation, cross-world memory isolation, co-located member gathering interpretation, and persisted shared observational history; real client CI separately proves world-identity receipt and gathering presentation.
 
 ### P4 — Release hardening
-- [ ] Config surface for every experience family.
+- [x] Config surface for every experience family. Implemented in alpha.30 as restart-loaded `config/canvas-features.properties` toggles for HOME, weather/atmosphere, rare moments, familiar faces, village life, seasons, exploration/wonder, and community/multiplayer; defaults preserve current behavior and deterministic tests cover default-on and explicit-off parsing; mark proven after full CI is green.
 - [ ] Disable/reversibility tests.
 - [ ] Long-session soak.
 - [ ] Save/reload/backup/fork safety tests.
