@@ -71,6 +71,10 @@ required_classes = [
     "SharedSettlementPolicy.class",
     "SharedSettlementStore.class",
     "CanvasSettlementRuntime.class",
+    "CanvasWorldIdentityRuntime.class",
+    "CanvasWorldIdentityStore.class",
+    "WorldIdentityPayload.class",
+    "WorldMemoryScopePolicy.class",
 ]
 for required in required_classes:
     assert any(name.endswith(required) for name in names), required
