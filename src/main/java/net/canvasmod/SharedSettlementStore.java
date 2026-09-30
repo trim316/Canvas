@@ -68,6 +68,11 @@ public final class SharedSettlementStore {
         return List.copyOf(created);
     }
 
+    public Settlement match(SharedSettlementPolicy.Candidate candidate) {
+        if (candidate == null) return null;
+        return nearestUnclaimed(candidate, Set.of());
+    }
+
     public List<Settlement> settlements() {
         List<Settlement> result = new ArrayList<>(settlements.values());
         result.sort(Comparator.comparing(Settlement::id));
