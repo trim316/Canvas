@@ -167,6 +167,33 @@
       }
     ]
   },
+  "exploration.wonder_horizon_glow": {
+    "sounds": [
+      {
+        "name": "canvas:cues/wonder_horizon_glow",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "exploration.wonder_harbor_hush": {
+    "sounds": [
+      {
+        "name": "canvas:cues/wonder_harbor_hush",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
+  "exploration.wonder_golden_field": {
+    "sounds": [
+      {
+        "name": "canvas:cues/wonder_golden_field",
+        "stream": false,
+        "volume": 1
+      }
+    ]
+  },
   "music.exploration_place": {
     "sounds": [
       {
