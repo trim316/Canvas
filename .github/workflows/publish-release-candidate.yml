@@ -10,7 +10,7 @@ on:
     types: [completed]
 
 permissions:
-  actions: read
+  actions: write
   contents: write
 
 concurrency:
@@ -112,3 +112,11 @@ jobs:
             --title "Canvas 0.2.0 release candidate (${TESTED_SHA:0:12})" \
             --notes-file published/RELEASE-NOTES.md \
             --prerelease --latest=false
+
+          # Releases created with GITHUB_TOKEN do not recursively emit normal
+          # release-triggered workflows. workflow_dispatch is explicitly
+          # allowed, so start exact-artifact acceptance ourselves.
+          gh workflow run release-acceptance.yml \
+            --repo "$REPOSITORY" \
+            --ref "$TESTED_SHA" \
+            -f tag="$TAG"
