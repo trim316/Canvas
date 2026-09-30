@@ -20,6 +20,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.phys.EntityHitResult;
 
 final class CanvasFamiliarityClient {
@@ -76,6 +78,9 @@ final class CanvasFamiliarityClient {
         for (Entity entity : client.level.getEntities(client.player, box, e -> e instanceof Mob)) {
             if (processed++ >= LowEndPerformanceBudgetPolicy.FAMILIARITY_MAX_MOBS_PER_SAMPLE) break;
             if (!(entity instanceof Mob mob) || !mob.isAlive()) continue;
+            if (!FamiliarBondPolicy.eligibleVanillaSubject(
+                    BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType()).toString(),
+                    mob.getType().getCategory() == MobCategory.MONSTER)) continue;
             int observed = familiarity.merge(
                     mob.getUUID(),
                     FamiliarityPolicy.SAMPLE_INTERVAL_TICKS,
@@ -91,6 +96,9 @@ final class CanvasFamiliarityClient {
         if (client.player == null || !(client.hitResult instanceof EntityHitResult hit)) return;
         Entity entity = hit.getEntity();
         if (!(entity instanceof Mob mob) || !mob.isAlive()) return;
+        if (!FamiliarBondPolicy.eligibleVanillaSubject(
+                BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType()).toString(),
+                mob.getType().getCategory() == MobCategory.MONSTER)) return;
 
         UUID id = mob.getUUID();
         int observed = familiarity.getOrDefault(id, 0);
