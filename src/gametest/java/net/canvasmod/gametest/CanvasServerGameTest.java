@@ -41,6 +41,7 @@ import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.SeasonPolicy;
+import net.canvasmod.SeasonalPresentationPolicy;
 import net.canvasmod.SeasonalHomecomingPolicy;
 import net.canvasmod.SeasonalFamiliarityProfile;
 import net.canvasmod.SeasonalRareMomentPolicy;
@@ -1784,6 +1785,33 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 "Leaving loaded village range must clear its rainy evidence");
         context.assertFalse(departed.observe(false, VillageLifePolicy.Rhythm.ACTIVE, 260),
                 "Returning after rain ended cannot fabricate an observed clearing");
+        context.succeed();
+    }
+
+    @GameTest
+    public void seasonTransitionMustBelongToTheCurrentObservedWorld(GameTestHelper context) {
+        SeasonalPresentationPolicy transitions = new SeasonalPresentationPolicy();
+        context.assertFalse(transitions.observe(SeasonPolicy.Season.WINTER),
+                "First season seen in a newly joined world must not trigger music");
+        context.assertFalse(transitions.observe(SeasonPolicy.Season.WINTER),
+                "An unchanged winter must remain quiet");
+        context.assertTrue(transitions.observe(SeasonPolicy.Season.SPRING),
+                "A genuine observed winter-to-spring transition should earn a moment");
+        transitions.reset();
+        context.assertFalse(transitions.observe(SeasonPolicy.Season.AUTUMN),
+                "After disconnect, another world's autumn is not a spring-to-autumn event");
+        context.assertFalse(transitions.observe(SeasonPolicy.Season.UNKNOWN),
+                "Unknown provider responses cannot create fabricated transitions");
+        context.assertFalse(transitions.observe(SeasonPolicy.Season.AUTUMN),
+                "Unknown provider observation must not clear a genuine known season");
+        context.assertTrue(transitions.observe(SeasonPolicy.Season.WINTER),
+                "A genuine autumn-to-winter change within the new world should work");
+        transitions.reset();
+        transitions.seed(SeasonPolicy.Season.SUMMER);
+        context.assertFalse(transitions.observe(SeasonPolicy.Season.SUMMER),
+                "Returning home after observing summer away must not fake a season shift");
+        context.assertTrue(transitions.observe(SeasonPolicy.Season.AUTUMN),
+                "A real summer-to-autumn transition after a known observation is valid");
         context.succeed();
     }
 
