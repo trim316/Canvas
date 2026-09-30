@@ -6,7 +6,7 @@ import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.VillageLifePolicy;
-import net.canvasmod.VillageContinuityPolicy;
+import net.canvasmod.VillageContinuityPolicy;\nimport net.canvasmod.VillageWindDownPolicy;
 import net.canvasmod.VillageAfterRainPolicy;
 import net.canvasmod.SeasonalVillageProfile;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -34,7 +34,7 @@ final class CanvasVillageLifeClient {
     private long tick;
     private long lastMusicMoment = Long.MIN_VALUE / 4L;
     private VillageLifePolicy.Rhythm rhythm = VillageLifePolicy.Rhythm.NONE;
-    private final VillageContinuityPolicy continuity = new VillageContinuityPolicy();
+    private final VillageContinuityPolicy continuity = new VillageContinuityPolicy();\n    private final VillageWindDownPolicy windDown = new VillageWindDownPolicy();
     private final VillageAfterRainPolicy afterRain = new VillageAfterRainPolicy();
     private Object observedLevel;
     private int presentationTicks;
