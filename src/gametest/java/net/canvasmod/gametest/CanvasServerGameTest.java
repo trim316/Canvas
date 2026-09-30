@@ -9,6 +9,7 @@ import net.canvasmod.MilestoneZeroScenarioPolicy;
 import net.canvasmod.ObservationBudgetPolicy;
 import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.ExplorationMusicPolicy;
+import net.canvasmod.ExplorationWeatherPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -737,6 +738,36 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 ExplorationMusicPolicy.volumeFor(PlaceFamiliarityPolicy.Kind.PATH)
                         < ExplorationMusicPolicy.volumeFor(PlaceFamiliarityPolicy.Kind.VIEWPOINT),
                 "Ordinary routes should remain quieter than rare viewpoint transitions");
+        context.succeed();
+    }
+
+    @GameTest
+    public void explorationWeatherCombinesFamiliarPlaceAndWeatherSemantics(GameTestHelper context) {
+        context.assertTrue(
+                ExplorationWeatherPolicy.classify(
+                        PlaceFamiliarityPolicy.Kind.DOCK, true, false, true, false, false)
+                        == ExplorationWeatherPolicy.Moment.RAIN_ON_DOCK,
+                "Rain at a familiar dock should be interpreted as a dock-weather moment");
+        context.assertTrue(
+                ExplorationWeatherPolicy.classify(
+                        PlaceFamiliarityPolicy.Kind.VIEWPOINT, true, false, true, true, false)
+                        == ExplorationWeatherPolicy.Moment.STORM_OVERLOOK,
+                "Thunder at a familiar viewpoint should become a restrained overlook moment");
+        context.assertTrue(
+                ExplorationWeatherPolicy.classify(
+                        PlaceFamiliarityPolicy.Kind.FARM, true, false, false, false, true)
+                        == ExplorationWeatherPolicy.Moment.FIELD_AFTER_RAIN,
+                "A familiar farm may notice the calm immediately after rain");
+        context.assertTrue(
+                ExplorationWeatherPolicy.classify(
+                        PlaceFamiliarityPolicy.Kind.DOCK, false, false, true, false, false)
+                        == ExplorationWeatherPolicy.Moment.NONE,
+                "Unfamiliar terrain must remain ordinary");
+        context.assertTrue(
+                ExplorationWeatherPolicy.classify(
+                        PlaceFamiliarityPolicy.Kind.VIEWPOINT, true, true, true, true, false)
+                        == ExplorationWeatherPolicy.Moment.NONE,
+                "Exploration weather presentation must not compete inside HOME");
         context.succeed();
     }
 
