@@ -27,9 +27,14 @@ final class CanvasExperienceDirector {
     private boolean ciGuardrailAnnounced;
 
     void setWorldIdentity(String worldId) {
-        worldIdentity = worldId == null ? "" : worldId.trim();
+        String next = worldId == null ? "" : worldId.trim();
+        if (next.equals(worldIdentity)) return;
+        worldIdentity = next;
         memoryBound = false;
-        if (!worldIdentity.isBlank() && !pendingHomeDimension.isBlank()) bindPendingHome();
+        pendingHomeDimension = "";
+        pendingHomeX = 0;
+        pendingHomeY = 0;
+        pendingHomeZ = 0;
     }
 
     void bindHome(String dimension, int x, int y, int z) {
