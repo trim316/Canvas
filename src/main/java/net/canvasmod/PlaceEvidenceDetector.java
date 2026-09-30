@@ -79,10 +79,19 @@ public final class PlaceEvidenceDetector {
     }
 
     private static boolean isWoodSurface(String id) {
-        return id.contains("planks")
-                || id.endsWith("_slab")
+        if (id.contains("planks")) return true;
+        String[] woods = {
+                "oak", "spruce", "birch", "jungle", "acacia", "cherry",
+                "dark_oak", "pale_oak", "mangrove", "bamboo", "crimson", "warped"
+        };
+        boolean woodenShape = id.endsWith("_slab")
                 || id.endsWith("_stairs")
                 || id.endsWith("_fence");
+        if (!woodenShape) return false;
+        for (String wood : woods) {
+            if (id.contains(wood)) return true;
+        }
+        return false;
     }
 
     private static boolean isFarm(String id) {
