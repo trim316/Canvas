@@ -36,6 +36,7 @@ import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.SeasonPolicy;
+import net.canvasmod.SeasonalHomecomingPolicy;
 import net.canvasmod.SeasonalFamiliarityProfile;
 import net.canvasmod.SeasonalRareMomentPolicy;
 import net.canvasmod.SeasonalVillageProfile;
@@ -1497,6 +1498,52 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 TravelAtmospherePolicy.choose("minecraft:overworld", -23000L, false)
                         .event().equals(dawn.event()),
                 "Time wrap must not alter the Overworld dawn presentation");
+        context.succeed();
+    }
+
+    @GameTest
+    public void seasonalHomecomingsAreEarnedAndRespectStormAndSilence(GameTestHelper context) {
+        var familiar = HomecomingPolicy.compose(
+                true, VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.CLEAR, 2);
+        var unknown = SeasonalHomecomingPolicy.adapt(familiar, SeasonPolicy.Season.UNKNOWN, 2, 3);
+        context.assertTrue(unknown.equals(familiar),
+                "Unknown season must preserve ordinary homecoming exactly");
+
+        var firstVisit = SeasonalHomecomingPolicy.adapt(familiar, SeasonPolicy.Season.WINTER, 0, 2);
+        context.assertTrue(firstVisit.equals(familiar),
+                "Seasonal music is earned through recurring visits, not first arrival");
+
+        var winter = SeasonalHomecomingPolicy.adapt(familiar, SeasonPolicy.Season.WINTER, 2, 1);
+        var spring = SeasonalHomecomingPolicy.adapt(familiar, SeasonPolicy.Season.SPRING, 2, 1);
+        context.assertTrue("music.season_home_shift".equals(winter.musicEvent()),
+                "Recognized, repeatedly visited HOME should acquire restrained seasonal music");
+        context.assertTrue(winter.cuePitch() < familiar.cuePitch()
+                        && spring.cuePitch() > familiar.cuePitch(),
+                "Winter and spring should color the same earned homecoming differently");
+        context.assertTrue(winter.cueEvent().equals(familiar.cueEvent())
+                        && winter.cueVolume() == familiar.cueVolume(),
+                "Season must not raise cue loudness or override earned homecoming identity");
+
+        var unchangedSeason = SeasonalHomecomingPolicy.adapt(
+                familiar, SeasonPolicy.Season.WINTER, 2, 0);
+        context.assertTrue(unchangedSeason.musicEvent().equals(familiar.musicEvent()),
+                "Before seasonal history is observed, retain normal homecoming music");
+
+        var storm = HomecomingPolicy.compose(
+                true, VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.THUNDER_SHELTERED, 3);
+        var winterStorm = SeasonalHomecomingPolicy.adapt(
+                storm, SeasonPolicy.Season.WINTER, 3, 3);
+        context.assertTrue("music.coming_home_storm".equals(winterStorm.musicEvent()),
+                "Seasonal accents must never displace authored shelter-in-thunder music");
+
+        var quiet = HomecomingPolicy.compose(
+                false, VillageLifePolicy.Rhythm.NONE,
+                WeatherCharacterPolicy.Character.CLEAR, 3);
+        context.assertTrue(SeasonalHomecomingPolicy.adapt(
+                        quiet, SeasonPolicy.Season.WINTER, 3, 3).equals(quiet),
+                "Quiet HOME must remain quiet: no seasonal musical reward without context");
         context.succeed();
     }
 
