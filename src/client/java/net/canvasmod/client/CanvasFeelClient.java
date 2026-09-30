@@ -11,6 +11,7 @@ import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
+import net.canvasmod.TravelAtmospherePolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -224,7 +225,7 @@ final class CanvasFeelClient {
                     CanvasFeelProfile.volume(phase, sheltered),
                     CanvasFeelProfile.pitch(phase));
         } else if (weatherEnabled) {
-            setAwayAmbience(dayTime, sheltered);
+            setAwayAmbience(dimension, dayTime, sheltered);
         } else {
             stopAmbience(25);
             ambienceKey = "";
@@ -289,15 +290,11 @@ final class CanvasFeelClient {
         }
     }
 
-    private void setAwayAmbience(long dayTime, boolean sheltered) {
-        boolean evening = dayTime >= 11500L && dayTime < 14000L;
-        boolean night = dayTime >= 13500L && dayTime < 22500L;
-        boolean morning = dayTime >= 22500L || dayTime < 1700L;
-
-        if (night && sheltered) {
-            setAmbience("presence.void_stillness", 0.045f, 0.985f);
-        } else if (morning || evening) {
-            setAmbience("presence.harbor_air", 0.028f, morning ? 1.015f : 0.985f);
+    private void setAwayAmbience(String dimension, long dayTime, boolean sheltered) {
+        TravelAtmospherePolicy.Ambience plan =
+                TravelAtmospherePolicy.choose(dimension, dayTime, sheltered);
+        if (plan.audible()) {
+            setAmbience(plan.event(), plan.volume(), plan.pitch());
         } else {
             stopAmbience(35);
             ambienceKey = "";
