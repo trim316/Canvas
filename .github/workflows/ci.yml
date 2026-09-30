@@ -52,6 +52,22 @@ jobs:
       - name: Inspect Fabric runtime artifact
         run: python3 scripts/verify_artifact.py build/libs/*.jar
 
+      - name: Record validated runtime source and digest attestation
+        shell: bash
+        run: |
+          JAR="$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' | head -n 1)"
+          test -n "$JAR"
+          python3 scripts/attest_artifact.py "$JAR" build/canvas-artifact-attestation.json
+          python3 scripts/verify_artifact_provenance.py "$JAR" build/canvas-artifact-attestation.json
+          python3 scripts/test_artifact_provenance.py
+
+      - name: Upload tested runtime provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: canvas-build-attestation
+          path: build/canvas-artifact-attestation.json
+          if-no-files-found: error
+
       - name: Upload server evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -218,6 +234,19 @@ jobs:
         with:
           name: canvas-companion-mods
           path: companions
+
+      - name: Download tested runtime provenance
+        uses: actions/download-artifact@v4
+        with:
+          name: canvas-build-attestation
+          path: attestation
+
+      - name: Verify packaged artifact matches the exact tested build
+        shell: bash
+        run: |
+          JAR="$(find candidate -type f -name '*.jar' ! -name '*-sources.jar' | head -n 1)"
+          test -n "$JAR"
+          python3 scripts/verify_artifact_provenance.py "$JAR" attestation/canvas-artifact-attestation.json
 
       - name: Build checksum-bound playtest bundle
         run: python3 scripts/package_candidate.py candidate companions dist/Canvas-26.2-PROVEN.zip
