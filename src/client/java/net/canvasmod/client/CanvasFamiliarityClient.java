@@ -10,9 +10,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import net.canvasmod.FamiliarityPolicy;
+import net.canvasmod.FamiliarBondPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.LowEndPerformanceBudgetPolicy;
-import net.canvasmod.SeasonalFamiliarityProfile;
 import net.canvasmod.WorldMemoryScopePolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
@@ -20,6 +20,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.phys.EntityHitResult;
 
 final class CanvasFamiliarityClient {
@@ -31,6 +33,7 @@ final class CanvasFamiliarityClient {
     private final CanvasExperienceDirector director;
     private final Map<UUID, Integer> familiarity = new HashMap<>();
     private final Map<UUID, Long> lastCue = new HashMap<>();
+    private final java.util.Set<UUID> greetedThisSession = new java.util.HashSet<>();
     private final Path stateFile = FabricLoader.getInstance().getConfigDir()
             .resolve("canvas-familiarity-v1.properties");
     private long tick;
@@ -57,6 +60,7 @@ final class CanvasFamiliarityClient {
         worldIdentity = next;
         familiarity.clear();
         lastCue.clear();
+        greetedThisSession.clear();
         director.setFamiliarNearby(false);
         if (!worldIdentity.isBlank()) load();
     }
@@ -74,6 +78,9 @@ final class CanvasFamiliarityClient {
         for (Entity entity : client.level.getEntities(client.player, box, e -> e instanceof Mob)) {
             if (processed++ >= LowEndPerformanceBudgetPolicy.FAMILIARITY_MAX_MOBS_PER_SAMPLE) break;
             if (!(entity instanceof Mob mob) || !mob.isAlive()) continue;
+            if (!FamiliarBondPolicy.eligibleVanillaSubject(
+                    BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType()).toString(),
+                    mob.getType().getCategory() == MobCategory.MONSTER)) continue;
             int observed = familiarity.merge(
                     mob.getUUID(),
                     FamiliarityPolicy.SAMPLE_INTERVAL_TICKS,
@@ -89,6 +96,9 @@ final class CanvasFamiliarityClient {
         if (client.player == null || !(client.hitResult instanceof EntityHitResult hit)) return;
         Entity entity = hit.getEntity();
         if (!(entity instanceof Mob mob) || !mob.isAlive()) return;
+        if (!FamiliarBondPolicy.eligibleVanillaSubject(
+                BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType()).toString(),
+                mob.getType().getCategory() == MobCategory.MONSTER)) return;
 
         UUID id = mob.getUUID();
         int observed = familiarity.getOrDefault(id, 0);
@@ -98,12 +108,18 @@ final class CanvasFamiliarityClient {
         if (!FamiliarityPolicy.cueEligible(observed, true, sinceLast)) return;
         if (!director.allowMoment(MomentDensityPolicy.Kind.FAMILIAR_FACE, tick, false)) return;
 
-        client.player.sendSystemMessage(Component.literal("Canvas · A familiar face"));
+        FamiliarBondPolicy.Greeting greeting = FamiliarBondPolicy.greeting(
+                observed, greetedThisSession.contains(id), director.season());
+        if (greeting.bond() == FamiliarBondPolicy.Bond.UNKNOWN) return;
+        if (greeting.showText()) {
+            client.player.sendSystemMessage(Component.literal(
+                    greeting.bond() == FamiliarBondPolicy.Bond.OLD_FRIEND
+                            ? "Canvas · An old friend" : "Canvas · A familiar face"));
+        }
         feel.presentFamiliarFace(
-                SeasonalFamiliarityProfile.cueVolume(director.season()),
-                SeasonalFamiliarityProfile.cuePitch(director.season()),
-                SeasonalFamiliarityProfile.pulseArgb(director.season()));
+                greeting.volume(), greeting.pitchMultiplier(), greeting.pulseArgb());
         director.noteFamiliarMoment();
+        greetedThisSession.add(id);
         lastCue.put(id, tick);
         save();
     }
@@ -117,6 +133,7 @@ final class CanvasFamiliarityClient {
             UUID id = entries.get(i).getKey();
             familiarity.remove(id);
             lastCue.remove(id);
+            greetedThisSession.remove(id);
         }
     }
 
