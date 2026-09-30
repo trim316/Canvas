@@ -11,6 +11,7 @@ import java.util.Properties;
 import java.util.UUID;
 import net.canvasmod.FamiliarityPolicy;
 import net.canvasmod.FamiliarBondPolicy;
+import net.canvasmod.FamiliarGreetingHistoryPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.WorldMemoryScopePolicy;
@@ -33,7 +34,7 @@ final class CanvasFamiliarityClient {
     private final CanvasExperienceDirector director;
     private final Map<UUID, Integer> familiarity = new HashMap<>();
     private final Map<UUID, Long> lastCue = new HashMap<>();
-    private final java.util.Set<UUID> greetedThisSession = new java.util.HashSet<>();
+    private final Map<UUID, Integer> announcedMilestones = new HashMap<>();
     private final Path stateFile = FabricLoader.getInstance().getConfigDir()
             .resolve("canvas-familiarity-v1.properties");
     private long tick;
@@ -60,7 +61,7 @@ final class CanvasFamiliarityClient {
         worldIdentity = next;
         familiarity.clear();
         lastCue.clear();
-        greetedThisSession.clear();
+        announcedMilestones.clear();
         director.setFamiliarNearby(false);
         if (!worldIdentity.isBlank()) load();
     }
@@ -108,8 +109,14 @@ final class CanvasFamiliarityClient {
         if (!FamiliarityPolicy.cueEligible(observed, true, sinceLast)) return;
         if (!director.allowMoment(MomentDensityPolicy.Kind.FAMILIAR_FACE, tick, false)) return;
 
+        int previousTier = announcedMilestones.getOrDefault(id, 0);
         FamiliarBondPolicy.Greeting greeting = FamiliarBondPolicy.greeting(
-                observed, greetedThisSession.contains(id), director.season());
+                observed, !FamiliarGreetingHistoryPolicy.shouldAnnounce(
+                        observed >= FamiliarBondPolicy.OLD_FRIEND_TICKS
+                                ? FamiliarBondPolicy.Bond.OLD_FRIEND
+                                : FamiliarBondPolicy.Bond.RECOGNIZED,
+                        previousTier),
+                director.season());
         if (greeting.bond() == FamiliarBondPolicy.Bond.UNKNOWN) return;
         if (greeting.showText()) {
             client.player.sendSystemMessage(Component.literal(
@@ -119,7 +126,8 @@ final class CanvasFamiliarityClient {
         feel.presentFamiliarFace(
                 greeting.volume(), greeting.pitchMultiplier(), greeting.pulseArgb());
         director.noteFamiliarMoment();
-        greetedThisSession.add(id);
+        announcedMilestones.put(id,
+                FamiliarGreetingHistoryPolicy.acknowledge(greeting.bond(), previousTier));
         lastCue.put(id, tick);
         save();
     }
@@ -133,7 +141,7 @@ final class CanvasFamiliarityClient {
             UUID id = entries.get(i).getKey();
             familiarity.remove(id);
             lastCue.remove(id);
-            greetedThisSession.remove(id);
+            announcedMilestones.remove(id);
         }
     }
 
@@ -153,7 +161,17 @@ final class CanvasFamiliarityClient {
             try {
                 UUID id = UUID.fromString(rawId);
                 int observed = Integer.parseInt(properties.getProperty(key, "0"));
-                if (observed > 0) familiarity.put(id, Math.min(MAX_OBSERVED_TICKS, observed));
+                if (observed > 0) {
+                    familiarity.put(id, Math.min(MAX_OBSERVED_TICKS, observed));
+                    String milestoneKey = prefix + id + ".announced";
+                    int tier;
+                    try {
+                        tier = Integer.parseInt(properties.getProperty(milestoneKey, "0"));
+                    } catch (NumberFormatException ignored) {
+                        tier = 0;
+                    }
+                    if (tier > 0) announcedMilestones.put(id, Math.min(2, tier));
+                }
             } catch (IllegalArgumentException ignored) { }
         }
         prune();
@@ -177,6 +195,9 @@ final class CanvasFamiliarityClient {
             properties.setProperty(
                     prefix + entry.getKey() + ".ticks",
                     Integer.toString(entry.getValue()));
+            int tier = announcedMilestones.getOrDefault(entry.getKey(), 0);
+            if (tier > 0) properties.setProperty(
+                    prefix + entry.getKey() + ".announced", Integer.toString(tier));
         }
 
         try {
