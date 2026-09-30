@@ -12,6 +12,7 @@ public final class CanvasFeatureConfig {
     public enum Family {
         HOME,
         WEATHER,
+        RARE_MOMENTS,
         FAMILIAR_FACES,
         VILLAGE_LIFE,
         SEASONS,
