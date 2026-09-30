@@ -171,7 +171,7 @@ jobs:
         with:
           gradle-version: "9.5.1"
       - name: Install constrained production-client runtime
-        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libgl1 libopenal1 ffmpeg util-linux
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libgl1 libopenal1 ffmpeg util-linux python3-pil
       - name: Resolve and admit exact production companion contract
         run: |
           python3 scripts/generate_audio.py
