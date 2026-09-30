@@ -26,6 +26,32 @@ for root in roots:
             if pattern in text:
                 violations.append(f"{path}: possible forced chunk-load pattern {pattern}")
 
+feature_wiring = {
+    "HOME": [
+        Path("src/main/java/net/canvasmod/CanvasMod.java"),
+        Path("src/client/java/net/canvasmod/client/CanvasFeelClient.java"),
+    ],
+    "WEATHER": [Path("src/client/java/net/canvasmod/client/CanvasFeelClient.java")],
+    "RARE_MOMENTS": [Path("src/client/java/net/canvasmod/client/CanvasFeelClient.java")],
+    "FAMILIAR_FACES": [Path("src/client/java/net/canvasmod/client/CanvasClient.java")],
+    "VILLAGE_LIFE": [Path("src/client/java/net/canvasmod/client/CanvasClient.java")],
+    "SEASONS": [Path("src/client/java/net/canvasmod/client/CanvasClient.java")],
+    "EXPLORATION": [
+        Path("src/main/java/net/canvasmod/CanvasMod.java"),
+        Path("src/client/java/net/canvasmod/client/CanvasClient.java"),
+    ],
+    "COMMUNITY": [
+        Path("src/main/java/net/canvasmod/CanvasMod.java"),
+        Path("src/client/java/net/canvasmod/client/CanvasClient.java"),
+    ],
+}
+for family, paths in feature_wiring.items():
+    token = f"CanvasFeatureConfig.Family.{family}"
+    for path in paths:
+        source = path.read_text(encoding="utf-8", errors="replace")
+        if token not in source:
+            violations.append(f"{path}: feature family {family} is no longer wired to its config gate")
+
 detectors = [
     ("HomeEvidenceDetector", Path("src/main/java/net/canvasmod/HomeEvidenceDetector.java")),
     ("PlaceEvidenceDetector", Path("src/main/java/net/canvasmod/PlaceEvidenceDetector.java")),
@@ -42,3 +68,4 @@ print("Canvas invariant verification: PASS")
 print("- no production block/world mutation calls found")
 print("- no production forced chunk-load calls found")
 print("- HOME and place detectors remain getChunkNow loaded-only")
+print("- every feature-family toggle remains wired to its production execution path")
