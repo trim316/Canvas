@@ -53,7 +53,7 @@ This file is the durable queue for the hourly Canvas development automation. The
 
 ### P4 — Release hardening
 - [x] Config surface for every experience family. Implemented in alpha.30 as restart-loaded `config/canvas-features.properties` toggles for HOME, weather/atmosphere, rare moments, familiar faces, village life, seasons, exploration/wonder, and community/multiplayer; defaults preserve current behavior and deterministic tests cover default-on and explicit-off parsing; mark proven after full CI is green.
-- [ ] Disable/reversibility tests.
+- [x] Disable/reversibility tests. Implemented in alpha.31 with an all-family off/on round-trip that proves persisted personal world memory is unchanged, plus a source invariant that fails CI if any declared feature-family toggle becomes disconnected from its server/client execution path; mark proven after full CI is green.
 - [ ] Long-session soak.
 - [ ] Save/reload/backup/fork safety tests.
 - [ ] Low-end performance budget.

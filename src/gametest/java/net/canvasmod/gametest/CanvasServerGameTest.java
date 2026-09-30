@@ -1311,6 +1311,56 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.succeed();
     }
 
+    @GameTest
+    public void featureDisableReenableRoundTripPreservesExistingWorldMemory(GameTestHelper context) throws Exception {
+        var dir = Files.createTempDirectory("canvas-feature-reversibility");
+        var configFile = dir.resolve("canvas-features.properties");
+        var memoryFile = dir.resolve("world-memory.properties");
+
+        CanvasWorldMemoryStore memory = new CanvasWorldMemoryStore(memoryFile);
+        memory.bind("world|test|minecraft:overworld|10|64|10");
+        memory.noteHomecoming();
+        memory.noteFamiliarMoment();
+        var before = memory.snapshot();
+
+        java.util.Properties off = new java.util.Properties();
+        for (CanvasFeatureConfig.Family family : CanvasFeatureConfig.Family.values()) {
+            off.setProperty("family." + family.name().toLowerCase(java.util.Locale.ROOT), "false");
+        }
+        try (var out = Files.newOutputStream(configFile)) {
+            off.store(out, "off");
+        }
+        CanvasFeatureConfig disabled = CanvasFeatureConfig.load(configFile);
+        for (CanvasFeatureConfig.Family family : CanvasFeatureConfig.Family.values()) {
+            context.assertFalse(disabled.enabled(family),
+                    "Every family should be disabled during reversibility test: " + family);
+        }
+
+        java.util.Properties on = new java.util.Properties();
+        for (CanvasFeatureConfig.Family family : CanvasFeatureConfig.Family.values()) {
+            on.setProperty("family." + family.name().toLowerCase(java.util.Locale.ROOT), "true");
+        }
+        try (var out = Files.newOutputStream(configFile)) {
+            on.store(out, "on");
+        }
+        CanvasFeatureConfig reenabled = CanvasFeatureConfig.load(configFile);
+        for (CanvasFeatureConfig.Family family : CanvasFeatureConfig.Family.values()) {
+            context.assertTrue(reenabled.enabled(family),
+                    "Every family should re-enable cleanly: " + family);
+        }
+
+        CanvasWorldMemoryStore reloaded = new CanvasWorldMemoryStore(memoryFile);
+        reloaded.bind("world|test|minecraft:overworld|10|64|10");
+        var after = reloaded.snapshot();
+        context.assertTrue(before.equals(after),
+                "Disabling and re-enabling Canvas families must not erase or rewrite persisted world memory");
+
+        Files.deleteIfExists(configFile);
+        Files.deleteIfExists(memoryFile);
+        Files.deleteIfExists(dir);
+        context.succeed();
+    }
+
     @Override
     public void invokeTestMethod(GameTestHelper context, Method method) throws ReflectiveOperationException {
         method.invoke(this, context);
