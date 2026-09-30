@@ -1584,6 +1584,21 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.succeed();
     }
 
+    @GameTest
+    public void familiarComfortRequiresVanillaNonhostileEntity(GameTestHelper context) {
+        context.assertTrue(FamiliarBondPolicy.eligibleVanillaSubject("minecraft:cat", false),
+                "A harmless vanilla cat should be able to become familiar");
+        context.assertTrue(FamiliarBondPolicy.eligibleVanillaSubject("minecraft:wolf", false),
+                "A harmless vanilla wolf should be eligible for earned familiarity");
+        context.assertFalse(FamiliarBondPolicy.eligibleVanillaSubject("minecraft:creeper", true),
+                "Hostile mobs must never provide comforting home or old-friend cues");
+        context.assertFalse(FamiliarBondPolicy.eligibleVanillaSubject("mod:unknown_creature", false),
+                "Do not invent a familiarity classification for an unreviewed modded mob");
+        context.assertFalse(FamiliarBondPolicy.eligibleVanillaSubject(null, false),
+                "Unknown registry identity must fail closed");
+        context.succeed();
+    }
+
     @Override
     public void invokeTestMethod(GameTestHelper context, Method method) throws ReflectiveOperationException {
         method.invoke(this, context);
