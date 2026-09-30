@@ -16,6 +16,16 @@ public final class FamiliarBondPolicy {
 
     private FamiliarBondPolicy() { }
 
+    /** Canvas does not classify hostiles or unreviewed modded mobs as companions.
+     *  The server/client entity registry identifies real vanilla subjects; this
+     *  pure decision deliberately does not cause any entity behavior.
+     */
+    public static boolean eligibleVanillaSubject(String entityId, boolean hostileCategory) {
+        return entityId != null && entityId.startsWith("minecraft:")
+                && entityId.length() > "minecraft:".length()
+                && !hostileCategory;
+    }
+
     public static Greeting greeting(
             int observedTicks,
             boolean greetedThisSession,
