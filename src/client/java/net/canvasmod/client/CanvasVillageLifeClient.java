@@ -7,6 +7,7 @@ import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.VillageContinuityPolicy;
+import net.canvasmod.VillageAfterRainPolicy;
 import net.canvasmod.SeasonalVillageProfile;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -34,6 +35,7 @@ final class CanvasVillageLifeClient {
     private long lastMusicMoment = Long.MIN_VALUE / 4L;
     private VillageLifePolicy.Rhythm rhythm = VillageLifePolicy.Rhythm.NONE;
     private final VillageContinuityPolicy continuity = new VillageContinuityPolicy();
+    private final VillageAfterRainPolicy afterRain = new VillageAfterRainPolicy();
     private Object observedLevel;
     private int presentationTicks;
     private boolean ciAnnounced;
@@ -57,6 +59,7 @@ final class CanvasVillageLifeClient {
     private void update() {
         if (client.level == null || client.player == null) {
             continuity.reset();
+            afterRain.reset();
             observedLevel = null;
             rhythm = VillageLifePolicy.Rhythm.NONE;
             director.setVillageRhythm(rhythm);
@@ -67,6 +70,7 @@ final class CanvasVillageLifeClient {
         // different save/server after a dimension or world connection change.
         if (observedLevel != client.level) {
             continuity.reset();
+            afterRain.reset();
             observedLevel = client.level;
             rhythm = VillageLifePolicy.Rhythm.NONE;
             director.setVillageRhythm(rhythm);
@@ -108,6 +112,14 @@ final class CanvasVillageLifeClient {
 
         rhythm = next;
         director.setVillageRhythm(rhythm);
+        // This uses the existing bounded villager sample: no second entity
+        // scan, fabricated weather, AI changes or extra always-on observer.
+        if (!CI_VISUAL_TEST && afterRain.observe(
+                client.level.isRaining() || client.level.isThundering(),
+                rhythm, tick)
+                && director.allowMoment(MomentDensityPolicy.Kind.WEATHER_TRANSITION, tick, false)) {
+            client.getSoundManager().play(new CanvasVillageWeatherCue());
+        }
         if (presentationTicks > 0) presentationTicks = Math.max(0, presentationTicks - 20);
     }
 
@@ -169,6 +181,25 @@ final class CanvasVillageLifeClient {
         if (color == 0) return;
         graphics.fill(0, 0, width, band, color);
         graphics.fill(0, height - band, width, height, color);
+    }
+
+    private static final class CanvasVillageWeatherCue extends AbstractTickableSoundInstance {
+        private int age;
+
+        CanvasVillageWeatherCue() {
+            super(SoundEvent.createVariableRangeEvent(
+                    Identifier.fromNamespaceAndPath("canvas", "feel.calm_after_storm")),
+                    SoundSource.AMBIENT, RandomSource.create());
+            this.volume = 0.12f;
+            this.pitch = 1.025f;
+            this.relative = true;
+            this.attenuation = SoundInstance.Attenuation.NONE;
+        }
+
+        @Override
+        public void tick() {
+            if (++age >= 20 * 6) stop();
+        }
     }
 
     private static final class CanvasMusicMoment extends AbstractTickableSoundInstance {
