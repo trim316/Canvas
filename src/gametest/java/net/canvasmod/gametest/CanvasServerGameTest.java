@@ -25,6 +25,9 @@ import net.canvasmod.SeasonsOfHomeScenarioPolicy;
 import net.canvasmod.SeasonalHomeProfile;
 import net.canvasmod.HomeEvidencePolicy;
 import net.canvasmod.HomeRecognitionAccumulator;
+import net.canvasmod.PlaceEvidenceDetector;
+import net.canvasmod.PlaceFamiliarityPolicy;
+import net.canvasmod.PlaceRecognitionAccumulator;
 import net.fabricmc.fabric.api.gametest.v1.CustomTestMethodInvoker;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
@@ -620,6 +623,78 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.assertTrue(
                 seen.equals(EnumSet.allOf(SeasonsOfHomeScenarioPolicy.Experience.class)),
                 "Four-season campaign must cover every Seasons of Home experience: " + seen);
+        context.succeed();
+    }
+
+    @GameTest
+    public void placeFamiliarityClassifiesPlayerAuthoredContexts(GameTestHelper context) {
+        context.assertTrue(
+                new PlaceFamiliarityPolicy.Evidence(12, 0, 0, 0, 0, 0, false, 0).classify()
+                        == PlaceFamiliarityPolicy.Kind.PATH,
+                "A repeated authored path surface should classify as PATH");
+        context.assertTrue(
+                new PlaceFamiliarityPolicy.Evidence(0, 12, 16, 0, 0, 0, false, 0).classify()
+                        == PlaceFamiliarityPolicy.Kind.DOCK,
+                "Wood beside substantial water should classify as DOCK");
+        context.assertTrue(
+                new PlaceFamiliarityPolicy.Evidence(0, 0, 0, 16, 0, 0, false, 0).classify()
+                        == PlaceFamiliarityPolicy.Kind.FARM,
+                "Dense farmland/crops should classify as FARM");
+        context.assertTrue(
+                new PlaceFamiliarityPolicy.Evidence(0, 0, 0, 0, 5, 1, false, 0).classify()
+                        == PlaceFamiliarityPolicy.Kind.GATHERING_SPOT,
+                "A social anchor with several comfort details should classify as GATHERING_SPOT");
+        context.assertTrue(
+                new PlaceFamiliarityPolicy.Evidence(0, 0, 0, 0, 0, 0, true, 2).classify()
+                        == PlaceFamiliarityPolicy.Kind.VIEWPOINT,
+                "An open-sky edge with multiple loaded drop directions should classify as VIEWPOINT");
+        context.succeed();
+    }
+
+    @GameTest
+    public void placeRecognitionRequiresStableRepeatedEvidence(GameTestHelper context) {
+        PlaceRecognitionAccumulator accumulator = new PlaceRecognitionAccumulator();
+        boolean recognized = false;
+        for (int i = 0; i < PlaceFamiliarityPolicy.REQUIRED_GOOD_SAMPLES; i++) {
+            recognized = accumulator.observe(
+                    PlaceFamiliarityPolicy.Kind.FARM,
+                    "minecraft:overworld",
+                    10.0 + i * 0.5,
+                    64.0,
+                    20.0,
+                    PlaceFamiliarityPolicy.REQUIRED_GOOD_SAMPLES);
+        }
+        context.assertTrue(recognized,
+                "Repeated evidence for the same authored place should become familiar");
+
+        accumulator.observe(
+                PlaceFamiliarityPolicy.Kind.PATH,
+                "minecraft:overworld",
+                100.0,
+                64.0,
+                100.0,
+                PlaceFamiliarityPolicy.REQUIRED_GOOD_SAMPLES);
+        context.assertTrue(accumulator.goodSamples() == 1,
+                "A different distant place must start a new familiarity candidate");
+        context.succeed();
+    }
+
+    @GameTest
+    public void loadedWorldPlaceDetectorRecognizesAuthoredFarm(GameTestHelper context) {
+        BlockPos center = new BlockPos(3, 2, 3);
+        for (int x = 1; x <= 4; x++) {
+            for (int z = 1; z <= 4; z++) {
+                context.setBlock(x, 1, z, Blocks.FARMLAND);
+            }
+        }
+
+        PlaceFamiliarityPolicy.Evidence evidence = PlaceEvidenceDetector.scan(
+                context.getLevel(), context.absolutePos(center));
+
+        context.assertTrue(evidence.farmBlocks() >= 12,
+                "Loaded-only place detector should observe authored farmland");
+        context.assertTrue(evidence.classify() == PlaceFamiliarityPolicy.Kind.FARM,
+                "Authored farmland should be interpreted as a FARM place");
         context.succeed();
     }
 
