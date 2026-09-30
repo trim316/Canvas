@@ -61,6 +61,19 @@ final class CanvasPlaceRuntime {
         PlaceFamiliarityPolicy.Kind kind = placeEvidence.classify();
         String dimension = level.dimension().identifier().toString();
 
+        RouteFamiliarityTracker.Observation routeObservation = state.routes.observe(
+                kind,
+                dimension,
+                player.getX(),
+                player.getZ());
+        if (routeObservation.becameFamiliar()) {
+            evidence("route_familiar", player.getUUID().toString(),
+                    "tick=" + tick
+                            + ",segment=" + routeObservation.segmentKey()
+                            + ",traversals=" + routeObservation.traversals());
+            save();
+        }
+
         boolean familiarNow = alreadyKnown(
                 state.places,
                 kind,
@@ -160,6 +173,16 @@ final class CanvasPlaceRuntime {
                 properties.setProperty(key + "y", Double.toString(place.y()));
                 properties.setProperty(key + "z", Double.toString(place.z()));
             }
+
+            var routes = entry.getValue().routes.entries();
+            properties.setProperty(prefix + ".route.count", Integer.toString(routes.size()));
+            int routeIndex = 0;
+            for (var route : routes.entrySet()) {
+                String routeKey = prefix + ".route." + routeIndex + ".";
+                properties.setProperty(routeKey + "key", route.getKey());
+                properties.setProperty(routeKey + "traversals", Integer.toString(route.getValue()));
+                routeIndex++;
+            }
         }
 
         try {
@@ -208,6 +231,18 @@ final class CanvasPlaceRuntime {
                         state.places.add(new PlaceMemory(kind, dimension, x, y, z));
                     }
                 }
+
+                int routeCount = Math.min(
+                        RouteFamiliarityPolicy.MAX_SEGMENTS,
+                        Math.max(0, Integer.parseInt(
+                                properties.getProperty(prefix + ".route.count", "0"))));
+                for (int i = 0; i < routeCount; i++) {
+                    String routeKey = prefix + ".route." + i + ".";
+                    String segment = properties.getProperty(routeKey + "key", "");
+                    int traversals = Integer.parseInt(
+                            properties.getProperty(routeKey + "traversals", "0"));
+                    state.routes.restore(segment, traversals);
+                }
             } catch (IllegalArgumentException ignored) { }
         }
     }
@@ -232,6 +267,7 @@ final class CanvasPlaceRuntime {
 
     private static final class State {
         final PlaceRecognitionAccumulator accumulator = new PlaceRecognitionAccumulator();
+        final RouteFamiliarityTracker routes = new RouteFamiliarityTracker();
         final List<PlaceMemory> places = new ArrayList<>();
         String lastPayloadKey = "";
     }

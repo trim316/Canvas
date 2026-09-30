@@ -10,6 +10,8 @@ import net.canvasmod.ObservationBudgetPolicy;
 import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.ExplorationMusicPolicy;
 import net.canvasmod.ExplorationWeatherPolicy;
+import net.canvasmod.RouteFamiliarityPolicy;
+import net.canvasmod.RouteFamiliarityTracker;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -768,6 +770,76 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                         PlaceFamiliarityPolicy.Kind.VIEWPOINT, true, true, true, true, false)
                         == ExplorationWeatherPolicy.Moment.NONE,
                 "Exploration weather presentation must not compete inside HOME");
+        context.succeed();
+    }
+
+    @GameTest
+    public void repeatedRouteFamiliarityRequiresActualPathTraversal(GameTestHelper context) {
+        context.assertTrue(
+                RouteFamiliarityPolicy.eligibleSegment(
+                        PlaceFamiliarityPolicy.Kind.PATH,
+                        PlaceFamiliarityPolicy.Kind.PATH,
+                        "minecraft:overworld",
+                        "minecraft:overworld",
+                        2.0, 2.0, 20.0, 2.0),
+                "Movement across loaded path cells should be eligible as a route segment");
+        context.assertFalse(
+                RouteFamiliarityPolicy.eligibleSegment(
+                        PlaceFamiliarityPolicy.Kind.PATH,
+                        PlaceFamiliarityPolicy.Kind.PATH,
+                        "minecraft:overworld",
+                        "minecraft:overworld",
+                        2.0, 2.0, 8.0, 2.0),
+                "Movement that remains inside one coarse cell must not become a route");
+        context.assertFalse(
+                RouteFamiliarityPolicy.eligibleSegment(
+                        PlaceFamiliarityPolicy.Kind.FARM,
+                        PlaceFamiliarityPolicy.Kind.PATH,
+                        "minecraft:overworld",
+                        "minecraft:overworld",
+                        2.0, 2.0, 20.0, 2.0),
+                "Route familiarity must not infer corridors from unrelated place semantics");
+        context.succeed();
+    }
+
+    @GameTest
+    public void repeatedRouteFamiliarityIsDirectionNeutralAndEarned(GameTestHelper context) {
+        String forward = RouteFamiliarityPolicy.segmentKey(
+                "minecraft:overworld", 2.0, 2.0, 20.0, 2.0);
+        String reverse = RouteFamiliarityPolicy.segmentKey(
+                "minecraft:overworld", 20.0, 2.0, 2.0, 2.0);
+        context.assertTrue(forward.equals(reverse),
+                "Traveling the same corridor in reverse must address the same route memory");
+
+        RouteFamiliarityTracker tracker = new RouteFamiliarityTracker();
+        tracker.observe(PlaceFamiliarityPolicy.Kind.PATH, "minecraft:overworld", 2.0, 2.0);
+        var first = tracker.observe(
+                PlaceFamiliarityPolicy.Kind.PATH, "minecraft:overworld", 20.0, 2.0);
+        var second = tracker.observe(
+                PlaceFamiliarityPolicy.Kind.PATH, "minecraft:overworld", 2.0, 2.0);
+        var third = tracker.observe(
+                PlaceFamiliarityPolicy.Kind.PATH, "minecraft:overworld", 20.0, 2.0);
+
+        context.assertFalse(first.becameFamiliar() || second.becameFamiliar(),
+                "A route should remain ordinary during its first two traversals");
+        context.assertTrue(third.becameFamiliar(),
+                "The configured repeated traversal threshold should earn route familiarity");
+        context.assertTrue(tracker.isFamiliar(forward),
+                "Earned route familiarity must be queryable by its direction-neutral key");
+        context.succeed();
+    }
+
+    @GameTest
+    public void routeFamiliarityRestoreIsBounded(GameTestHelper context) {
+        RouteFamiliarityTracker tracker = new RouteFamiliarityTracker();
+        String key = RouteFamiliarityPolicy.segmentKey(
+                "minecraft:overworld", 2.0, 2.0, 20.0, 2.0);
+        tracker.restore(key, 99);
+        context.assertTrue(tracker.isFamiliar(key),
+                "Persisted familiar route state must survive reload");
+        context.assertTrue(
+                tracker.entries().get(key) == RouteFamiliarityPolicy.REQUIRED_TRAVERSALS,
+                "Restored traversal counts must clamp at the familiarity threshold");
         context.succeed();
     }
 
