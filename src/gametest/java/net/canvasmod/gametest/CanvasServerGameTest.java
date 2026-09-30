@@ -8,6 +8,7 @@ import net.canvasmod.CanvasWorldMemoryStore;
 import net.canvasmod.MilestoneZeroScenarioPolicy;
 import net.canvasmod.ObservationBudgetPolicy;
 import net.canvasmod.ContextualMusicPolicy;
+import net.canvasmod.ExplorationMusicPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -695,6 +696,47 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
                 "Loaded-only place detector should observe authored farmland");
         context.assertTrue(evidence.classify() == PlaceFamiliarityPolicy.Kind.FARM,
                 "Authored farmland should be interpreted as a FARM place");
+        context.succeed();
+    }
+
+    @GameTest
+    public void explorationMusicRequiresFamiliarMeaningfulTransitions(GameTestHelper context) {
+        context.assertTrue(
+                ExplorationMusicPolicy.shouldPresent(
+                        PlaceFamiliarityPolicy.Kind.NONE,
+                        PlaceFamiliarityPolicy.Kind.VIEWPOINT,
+                        true,
+                        false,
+                        ExplorationMusicPolicy.VIEWPOINT_COOLDOWN_TICKS),
+                "Entering a familiar viewpoint after quiet space should be eligible for exploration music");
+        context.assertFalse(
+                ExplorationMusicPolicy.shouldPresent(
+                        PlaceFamiliarityPolicy.Kind.PATH,
+                        PlaceFamiliarityPolicy.Kind.PATH,
+                        true,
+                        false,
+                        ExplorationMusicPolicy.GENERAL_COOLDOWN_TICKS),
+                "Remaining in the same familiar context must stay quiet");
+        context.assertFalse(
+                ExplorationMusicPolicy.shouldPresent(
+                        PlaceFamiliarityPolicy.Kind.NONE,
+                        PlaceFamiliarityPolicy.Kind.DOCK,
+                        false,
+                        false,
+                        ExplorationMusicPolicy.GENERAL_COOLDOWN_TICKS),
+                "Unfamiliar places must not immediately earn contextual music");
+        context.assertFalse(
+                ExplorationMusicPolicy.shouldPresent(
+                        PlaceFamiliarityPolicy.Kind.NONE,
+                        PlaceFamiliarityPolicy.Kind.FARM,
+                        true,
+                        true,
+                        ExplorationMusicPolicy.GENERAL_COOLDOWN_TICKS),
+                "Exploration music must not compete with HOME presentation");
+        context.assertTrue(
+                ExplorationMusicPolicy.volumeFor(PlaceFamiliarityPolicy.Kind.PATH)
+                        < ExplorationMusicPolicy.volumeFor(PlaceFamiliarityPolicy.Kind.VIEWPOINT),
+                "Ordinary routes should remain quieter than rare viewpoint transitions");
         context.succeed();
     }
 
