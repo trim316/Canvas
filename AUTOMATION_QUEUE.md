@@ -49,7 +49,7 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Multiplayer-safe familiar faces and place memory. Implemented in alpha.26 with stable per-world identity, fail-closed client binding, world-namespaced familiar-mob/HOME/season memory, and runtime packet evidence; mark proven after full CI is green.
 - [x] Community gathering interpretation. Implemented in alpha.27 from recognized settlement membership plus live player co-location only, with transition/cooldown gating, shared music density limits, and real client presentation evidence; mark proven after full CI is green.
 - [x] Shared but non-authoritative world memories. Implemented in alpha.28 as settlement-scoped observational history for recognized settlements and community gatherings; it never replaces personal memory, names places, assigns ownership, or drives quests; mark proven after full CI is green.
-- [ ] Multiplayer evidence campaign.
+- [x] Multiplayer evidence campaign. Implemented in alpha.29 with an end-to-end deterministic GameTest covering shared settlement formation, cross-world memory isolation, co-located member gathering interpretation, and persisted shared observational history; real client CI separately proves world-identity receipt and gathering presentation.
 
 ### P4 — Release hardening
 - [ ] Config surface for every experience family.
