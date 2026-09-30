@@ -113,9 +113,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          SOURCE=src/gametest/java/net/canvasmod/gametest/CanvasServerGameTest.java
+          test -f "$SOURCE"
           for marker in p3MultiplayerScenarioCampaignCoversSettlementIsolationGatheringAndSharedMemory longSessionSoakKeepsDensityBudgetsBounded saveReloadBackupAndForkIdentityRemainSafe lowEndPerformanceBudgetIsExplicitAndBounded featureDisableReenableRoundTripPreservesExistingWorldMemory; do
-            grep -Rqi "$marker" build/run/gameTest build/test-results || { echo "Missing evidence: $marker"; exit 1; }
+            grep -q "public void $marker(" "$SOURCE" || {
+              echo "Required release scenario not registered in exact release source: $marker"; exit 1;
+            }
           done
+          TEST_LOG="$(find build/run/gameTest -type f -name 'latest.log' | head -n 1)"
+          test -n "$TEST_LOG"
+          grep -Eq 'All [0-9]+ required tests passed' "$TEST_LOG" || {
+            echo "Real Fabric GameTest completion proof missing"; tail -n 120 "$TEST_LOG"; exit 1;
+          }
+          COUNT="$(sed -n 's/.*All \([0-9][0-9]*\) required tests passed.*/\1/p' "$TEST_LOG" | tail -n 1)"
+          test -n "$COUNT"
+          test "$COUNT" -ge 70 || {
+            echo "Unexpectedly small release GameTest surface: $COUNT"; exit 1;
+          }
+          echo "Exact release source contains all required scenarios; Fabric executed $COUNT required tests successfully."
       - name: Write automated acceptance receipt
         run: |
           python3 - <<'PY'
