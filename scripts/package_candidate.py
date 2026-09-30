@@ -85,12 +85,6 @@ manifest_path = stage / "INSTALL-MANIFEST.json"
 manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 files.append(manifest_path)
 
-hash_lines = []
-for path in sorted(files):
-    digest = sha256(path)
-    hash_lines.append(f"{digest}  {path.relative_to(stage).as_posix()}")
-(stage / "SHA256SUMS.txt").write_text("\n".join(hash_lines) + "\n", encoding="utf-8")
-
 (stage / "PROVEN.txt").write_text(
     "Canvas Minecraft 26.2 automated candidate\n"
     "This bundle is emitted only after server GameTests, client GameTests,\n"
@@ -199,6 +193,16 @@ del /Q "%PS1%" >nul 2>nul
 exit /b %RC%
 '''
 (stage / "RESTORE-CANVAS.cmd").write_text(restore, encoding="utf-8", newline="\r\n")
+
+hash_paths = [
+    path for path in stage.rglob("*")
+    if path.is_file() and path.name != "SHA256SUMS.txt"
+]
+hash_lines = []
+for path in sorted(hash_paths):
+    digest = sha256(path)
+    hash_lines.append(f"{digest}  {path.relative_to(stage).as_posix()}")
+(stage / "SHA256SUMS.txt").write_text("\n".join(hash_lines) + "\n", encoding="utf-8")
 
 output.parent.mkdir(parents=True, exist_ok=True)
 with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
