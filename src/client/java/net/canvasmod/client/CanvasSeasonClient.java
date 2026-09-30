@@ -2,6 +2,7 @@ package net.canvasmod.client;
 
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.SeasonPolicy;
+import net.canvasmod.SeasonalPresentationPolicy;
 import net.canvasmod.SeasonalHomeProfile;
 import net.canvasmod.SeasonalRareMomentPolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -28,7 +29,11 @@ final class CanvasSeasonClient {
     private long tick;
     private SeasonPolicy.Observation observation =
             new SeasonPolicy.Observation(SeasonPolicy.Season.UNKNOWN, "none", "");
-    private SeasonPolicy.Season previousKnown = SeasonPolicy.Season.UNKNOWN;
+    private final SeasonalPresentationPolicy transitions = new SeasonalPresentationPolicy();
+    private Object observedLevel;
+    private CanvasSeasonTransition activeTransition;
+    private CanvasSeasonCue activeCue;
+    private CanvasSeasonLoop fadingAmbience;
     private CanvasSeasonLoop ambience;
     private String ambienceKey = "";
     private int rareMomentTicks;
@@ -43,6 +48,11 @@ final class CanvasSeasonClient {
     void register() {
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             tick++;
+            // Tick-level cleanup avoids audible bleed during the sampling gap.
+            if (observedLevel != client.level) {
+                resetForWorld();
+                observedLevel = client.level;
+            }
             if (tick % SAMPLE_INTERVAL == 0) update();
             if (rareMomentTicks > 0) rareMomentTicks--;
         });
@@ -52,6 +62,23 @@ final class CanvasSeasonClient {
                 (graphics, tickCounter) -> render(graphics));
     }
 
+    void resetForWorld() {
+        transitions.reset();
+        observation = new SeasonPolicy.Observation(SeasonPolicy.Season.UNKNOWN, "none", "");
+        rareMoment = SeasonalRareMomentPolicy.Moment.NONE;
+        rareMomentTicks = 0;
+        if (ambience != null) ambience.endImmediately();
+        if (fadingAmbience != null) fadingAmbience.endImmediately();
+        if (activeTransition != null) activeTransition.endImmediately();
+        if (activeCue != null) activeCue.endImmediately();
+        ambience = null;
+        fadingAmbience = null;
+        activeTransition = null;
+        activeCue = null;
+        ambienceKey = "";
+        observedLevel = client.level;
+    }
+
     private void update() {
         observation = observer.observe(client);
         director.setSeason(observation.season());
@@ -59,7 +86,7 @@ final class CanvasSeasonClient {
         if (!feel.isAtHome() || !observation.known()) {
             stopAmbience(35);
             ambienceKey = "";
-            if (observation.known()) previousKnown = observation.season();
+            if (observation.known()) transitions.seed(observation.season());
             return;
         }
 
@@ -71,18 +98,17 @@ final class CanvasSeasonClient {
         long clock = client.level == null ? 0L : client.level.getOverworldClockTime();
         long worldDay = Math.floorDiv(clock, 24000L);
 
-        if (previousKnown != SeasonPolicy.Season.UNKNOWN
-                && previousKnown != observation.season()
+        if (transitions.observe(observation.season())
                 && director.allowMoment(MomentDensityPolicy.Kind.SEASON_SHIFT, tick, true)) {
             String event = SeasonalHomeProfile.transitionMusicEvent(observation.season());
             if (!event.isBlank()) {
-                client.getSoundManager().play(new CanvasSeasonTransition(
+                if (activeTransition != null) activeTransition.endImmediately();
+                activeTransition = new CanvasSeasonTransition(
                         event, 0.18f,
-                        SeasonalHomeProfile.homecomingMusicPitchMultiplier(observation.season())));
+                        SeasonalHomeProfile.homecomingMusicPitchMultiplier(observation.season()));
+                client.getSoundManager().play(activeTransition);
             }
         }
-        previousKnown = observation.season();
-
         boolean snowing = observer.isSnowingAt(client);
         long lastDay = director.lastSeasonalMomentDay();
         long daysSinceLast = lastDay <= Long.MIN_VALUE / 8L
@@ -120,8 +146,10 @@ final class CanvasSeasonClient {
     private void presentRareMoment(SeasonalRareMomentPolicy.Moment moment, long worldDay) {
         String event = SeasonalRareMomentPolicy.cueEvent(moment);
         if (event.isBlank()) return;
-        client.getSoundManager().play(new CanvasSeasonCue(
-                event, 0.28f, SeasonalRareMomentPolicy.cuePitch(moment)));
+        if (activeCue != null) activeCue.endImmediately();
+        activeCue = new CanvasSeasonCue(
+                event, 0.28f, SeasonalRareMomentPolicy.cuePitch(moment));
+        client.getSoundManager().play(activeCue);
         rareMoment = moment;
         rareMomentTicks = 140;
         director.noteSeasonalMoment(moment, worldDay);
@@ -157,7 +185,14 @@ final class CanvasSeasonClient {
     }
 
     private void stopAmbience(int ticks) {
-        if (ambience != null && !ambience.isStopped()) ambience.fadeOut(ticks);
+        if (fadingAmbience != null) fadingAmbience.endImmediately();
+        fadingAmbience = null;
+        if (ambience != null && !ambience.isStopped()) {
+            ambience.fadeOut(ticks);
+            fadingAmbience = ambience;
+        }
+        ambience = null;
+        ambienceKey = "";
     }
 
     private static final class CanvasSeasonTransition extends AbstractTickableSoundInstance {
@@ -171,6 +206,7 @@ final class CanvasSeasonClient {
             this.relative = true;
             this.attenuation = SoundInstance.Attenuation.NONE;
         }
+        void endImmediately() { volume = 0.0f; stop(); }
         @Override public void tick() { if (++age >= 20 * 14) stop(); }
     }
 
@@ -185,6 +221,7 @@ final class CanvasSeasonClient {
             this.relative = true;
             this.attenuation = SoundInstance.Attenuation.NONE;
         }
+        void endImmediately() { volume = 0.0f; stop(); }
         @Override public void tick() { if (++age >= 20 * 10) stop(); }
     }
 
@@ -210,6 +247,7 @@ final class CanvasSeasonClient {
             targetPitch = Math.max(0.85f, Math.min(1.15f, pitch));
         }
         void fadeOut(int ticks) { targetVolume = 0.0f; fadeRemaining = Math.max(1, ticks); }
+        void endImmediately() { targetVolume = 0.0f; volume = 0.0f; stop(); }
 
         @Override public void tick() {
             pitch += (targetPitch - pitch) * 0.08f;
