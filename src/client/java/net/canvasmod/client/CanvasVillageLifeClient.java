@@ -6,6 +6,7 @@ import net.canvasmod.ContextualMusicPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.LowEndPerformanceBudgetPolicy;
 import net.canvasmod.VillageLifePolicy;
+import net.canvasmod.VillageContinuityPolicy;
 import net.canvasmod.SeasonalVillageProfile;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -32,6 +33,8 @@ final class CanvasVillageLifeClient {
     private long tick;
     private long lastMusicMoment = Long.MIN_VALUE / 4L;
     private VillageLifePolicy.Rhythm rhythm = VillageLifePolicy.Rhythm.NONE;
+    private final VillageContinuityPolicy continuity = new VillageContinuityPolicy();
+    private Object observedLevel;
     private int presentationTicks;
     private boolean ciAnnounced;
 
@@ -53,10 +56,21 @@ final class CanvasVillageLifeClient {
 
     private void update() {
         if (client.level == null || client.player == null) {
+            continuity.reset();
+            observedLevel = null;
             rhythm = VillageLifePolicy.Rhythm.NONE;
             director.setVillageRhythm(rhythm);
             presentationTicks = 0;
             return;
+        }
+        // Never carry a stable village or partly observed gathering to a
+        // different save/server after a dimension or world connection change.
+        if (observedLevel != client.level) {
+            continuity.reset();
+            observedLevel = client.level;
+            rhythm = VillageLifePolicy.Rhythm.NONE;
+            director.setVillageRhythm(rhythm);
+            presentationTicks = 0;
         }
 
         VillageLifePolicy.Rhythm next;
@@ -70,11 +84,11 @@ final class CanvasVillageLifeClient {
             List<Entity> villagers = loadedVillagers();
             int clustered = maxCluster(villagers);
             boolean storming = client.level.isRaining() || client.level.isThundering();
-            next = VillageLifePolicy.classify(
+            next = continuity.observe(VillageLifePolicy.classify(
                     villagers.size(),
                     clustered,
                     client.level.getOverworldClockTime(),
-                    storming);
+                    storming));
         }
 
         long sinceLast = tick - lastMusicMoment;
