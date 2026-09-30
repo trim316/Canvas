@@ -2,6 +2,7 @@ package net.canvasmod.client;
 
 import net.canvasmod.CanvasWorldMemoryStore;
 import net.canvasmod.HomecomingPolicy;
+import net.canvasmod.SeasonalHomecomingPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
@@ -31,6 +32,7 @@ final class CanvasExperienceDirector {
         if (next.equals(worldIdentity)) return;
         worldIdentity = next;
         memoryBound = false;
+        season = net.canvasmod.SeasonPolicy.Season.UNKNOWN;
         pendingHomeDimension = "";
         pendingHomeX = 0;
         pendingHomeY = 0;
@@ -100,16 +102,17 @@ final class CanvasExperienceDirector {
     }
 
     HomecomingPolicy.Plan previewHomecoming() {
-        return HomecomingPolicy.compose(
-                familiarNearby,
-                villageRhythm,
-                weatherCharacter,
-                meaningfulReturns());
+        int history = meaningfulReturns();
+        return SeasonalHomecomingPolicy.adapt(
+                HomecomingPolicy.compose(familiarNearby, villageRhythm, weatherCharacter, history),
+                season, history, seasonTransitions());
     }
 
     HomecomingPolicy.Plan nextHomecoming() {
-        HomecomingPolicy.Plan plan =
-                HomecomingPolicy.compose(familiarNearby, villageRhythm, weatherCharacter, meaningfulReturns());
+        int history = meaningfulReturns();
+        HomecomingPolicy.Plan plan = SeasonalHomecomingPolicy.adapt(
+                HomecomingPolicy.compose(familiarNearby, villageRhythm, weatherCharacter, history),
+                season, history, seasonTransitions());
         if (memoryBound) worldMemory.noteHomecoming();
         return plan;
     }
