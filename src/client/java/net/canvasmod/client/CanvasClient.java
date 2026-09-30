@@ -22,6 +22,9 @@ public final class CanvasClient implements ClientModInitializer {
                 context.client().execute(() -> {
                     director.setWorldIdentity(payload.worldId());
                     familiarity.acceptWorldIdentity(payload.worldId());
+                    if (Boolean.parseBoolean(System.getenv().getOrDefault("CANVAS_VISUAL_TEST", "false"))) {
+                        System.out.println("CANVAS_CI_WORLD_IDENTITY_ACTIVE");
+                    }
                 }));
         ClientPlayNetworking.registerGlobalReceiver(HomeStatePayload.TYPE, (payload, context) ->
                 context.client().execute(() -> feel.acceptServerHome(payload)));
