@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.util.EnumSet;
 import net.canvasmod.CanvasFeelProfile;
+import net.canvasmod.AmbienceHandoffPolicy;
 import net.canvasmod.TravelAtmospherePolicy;
 import net.canvasmod.CanvasWorldMemoryStore;
 import net.canvasmod.MilestoneZeroScenarioPolicy;
@@ -1544,6 +1545,19 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
         context.assertTrue(SeasonalHomecomingPolicy.adapt(
                         quiet, SeasonPolicy.Season.WINTER, 3, 3).equals(quiet),
                 "Quiet HOME must remain quiet: no seasonal musical reward without context");
+        context.succeed();
+    }
+
+    @GameTest
+    public void homeAmbienceCrossfadeNeverStacksOldLoops(GameTestHelper context) {
+        context.assertTrue(AmbienceHandoffPolicy.oldestLoopsToRetire(0) == 0,
+                "A scene with no fading ambience must remain silent except its current sound");
+        context.assertTrue(AmbienceHandoffPolicy.oldestLoopsToRetire(1) == 0,
+                "One prior ambience may finish a restrained crossfade");
+        context.assertTrue(AmbienceHandoffPolicy.oldestLoopsToRetire(2) == 1,
+                "Two old loops require immediately retiring the oldest");
+        context.assertTrue(AmbienceHandoffPolicy.oldestLoopsToRetire(20) == 19,
+                "Rapid repeated phase or rain changes may not stack twenty audible loops");
         context.succeed();
     }
 
