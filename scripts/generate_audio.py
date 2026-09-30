@@ -120,6 +120,8 @@ def main() -> None:
            music_moment(13.0, [(130.81,.11),(164.81,.085),(196.0,.060),(261.63,.032)], .12, .70))
     encode(ROOT / "music/community_gathering.ogg",
            music_moment(15.0, [(174.61,.09),(220.0,.08),(261.63,.068),(349.23,.040),(440.0,.025)], .24, .50))
+    encode(ROOT / "music/exploration_place.ogg",
+           music_moment(15.0, [(146.83,.075),(196.0,.060),(246.94,.045),(329.63,.025)], .10, .58))
 
     encode(ROOT / "presence/rain_on_roof.ogg",
            loop_samples(26.0, [(98.0,.075),(123.47,.055),(146.83,.038)], .92, .024))

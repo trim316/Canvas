@@ -140,6 +140,15 @@
       }
     ]
   },
+  "music.exploration_place": {
+    "sounds": [
+      {
+        "name": "canvas:music/exploration_place",
+        "stream": true,
+        "volume": 1
+      }
+    ]
+  },
   "presence.rain_on_roof": {
     "sounds": [
       {

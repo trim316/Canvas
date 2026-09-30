@@ -45,7 +45,7 @@ text = log.read_text(encoding="utf-8", errors="replace")
 text_lower = text.lower()
 
 required = [
-    "canvas 0.2.0-alpha.19",
+    "canvas 0.2.0-alpha.20",
     "Reloading ResourceManager:",
     "Sound engine started",
 ]
@@ -84,6 +84,8 @@ if "CANVAS_CI_WEATHER_CHARACTER_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas weather-character presentation")
 if "CANVAS_CI_SEASONAL_RARE_ACTIVE" not in game_test_text:
     raise SystemExit("client GameTest never activated Canvas seasonal rare-moment presentation")
+if "CANVAS_CI_EXPLORATION_MUSIC_ACTIVE" not in game_test_text:
+    raise SystemExit("client GameTest never activated Canvas exploration music presentation")
 if "CANVAS_CI_NOTHING_HAPPENS_GUARDRAIL_ACTIVE" not in game_test_text:
     print("advisory: client did not naturally trigger a Nothing Happens suppression; "
           "the density policy is covered by deterministic server GameTests")
@@ -107,6 +109,7 @@ forbidden = [
     "File canvas:sounds/music/village_wake.ogg does not exist",
     "File canvas:sounds/music/village_wind_down.ogg does not exist",
     "File canvas:sounds/music/community_gathering.ogg does not exist",
+    "File canvas:sounds/music/exploration_place.ogg does not exist",
     "File canvas:sounds/music/season_home_shift.ogg does not exist",
     "File canvas:sounds/cues/season_first_snow.ogg does not exist",
     "File canvas:sounds/cues/season_spring_chorus.ogg does not exist",
