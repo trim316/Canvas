@@ -20,6 +20,7 @@ import net.canvasmod.SharedSettlementPolicy;
 import net.canvasmod.SharedSettlementStore;
 import net.canvasmod.CanvasWorldIdentityStore;
 import net.canvasmod.WorldMemoryScopePolicy;
+import net.canvasmod.SharedGatheringPolicy;
 import net.canvasmod.VillageLifePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
 import net.canvasmod.FamiliarityPolicy;
@@ -1161,6 +1162,44 @@ public final class CanvasServerGameTest implements CustomTestMethodInvoker {
 
         context.assertTrue(WorldMemoryScopePolicy.scope("", localHome).isBlank(),
                 "Memory must fail closed until a stable world identity is known");
+        context.succeed();
+    }
+
+    @GameTest
+    public void communityGatheringRequiresCoLocatedSettlementMembers(GameTestHelper context) {
+        var a = java.util.UUID.fromString("00000000-0000-0000-0000-000000000101");
+        var b = java.util.UUID.fromString("00000000-0000-0000-0000-000000000102");
+        var settlement = new SharedSettlementPolicy.Candidate(
+                "minecraft:overworld", 20.0, 64.0, 20.0, java.util.List.of(a, b));
+
+        var gathering = SharedGatheringPolicy.detect(
+                settlement,
+                java.util.List.of(
+                        new SharedGatheringPolicy.PlayerPresence(a, "minecraft:overworld", 18.0, 64.0, 20.0),
+                        new SharedGatheringPolicy.PlayerPresence(b, "minecraft:overworld", 24.0, 64.0, 21.0)));
+
+        context.assertTrue(gathering != null && gathering.participants().size() == 2,
+                "Two nearby members of the same settlement should form a community gathering");
+        context.succeed();
+    }
+
+    @GameTest
+    public void communityGatheringRejectsDistantOrForeignPlayers(GameTestHelper context) {
+        var a = java.util.UUID.fromString("00000000-0000-0000-0000-000000000111");
+        var b = java.util.UUID.fromString("00000000-0000-0000-0000-000000000112");
+        var outsider = java.util.UUID.fromString("00000000-0000-0000-0000-000000000113");
+        var settlement = new SharedSettlementPolicy.Candidate(
+                "minecraft:overworld", 0.0, 64.0, 0.0, java.util.List.of(a, b));
+
+        var gathering = SharedGatheringPolicy.detect(
+                settlement,
+                java.util.List.of(
+                        new SharedGatheringPolicy.PlayerPresence(a, "minecraft:overworld", 0.0, 64.0, 0.0),
+                        new SharedGatheringPolicy.PlayerPresence(b, "minecraft:overworld", 40.0, 64.0, 0.0),
+                        new SharedGatheringPolicy.PlayerPresence(outsider, "minecraft:overworld", 1.0, 64.0, 1.0)));
+
+        context.assertTrue(gathering == null,
+                "Distant members and non-members must not manufacture a shared gathering");
         context.succeed();
     }
 
