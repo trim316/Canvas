@@ -1,6 +1,7 @@
 package net.canvasmod.client;
 
 import java.util.Locale;
+import java.util.ArrayDeque;
 import net.canvasmod.CanvasFeelProfile;
 import net.canvasmod.CanvasFeatureConfig;
 import net.canvasmod.HomeEvidencePolicy;
@@ -11,6 +12,7 @@ import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.MomentDensityPolicy;
 import net.canvasmod.RareSurprisePolicy;
 import net.canvasmod.WeatherCharacterPolicy;
+import net.canvasmod.AmbienceHandoffPolicy;
 import net.canvasmod.TravelAtmospherePolicy;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -55,6 +57,7 @@ final class CanvasFeelClient {
     private long majorMomentDay = Long.MIN_VALUE / 4;
     private int majorMomentsToday;
     private CanvasLoopingSound ambience;
+    private final ArrayDeque<CanvasLoopingSound> fadingAmbiences = new ArrayDeque<>();
     private String ambienceKey = "";
     private boolean atHome;
     private boolean previousRaining;
@@ -76,6 +79,7 @@ final class CanvasFeelClient {
     }
 
     void acceptWorldIdentity(String worldId) {
+        clearAllAmbience();
         hasHome = false;
         atHome = false;
         homeDimension = "";
@@ -126,7 +130,7 @@ final class CanvasFeelClient {
             atHome = false;
             phase = CanvasFeelProfile.Phase.AWAY;
             previousRaining = false;
-            stopAmbience(30);
+            clearAllAmbience();
             return;
         }
 
@@ -485,7 +489,25 @@ final class CanvasFeelClient {
     }
 
     private void stopAmbience(int fadeTicks) {
-        if (ambience != null && !ambience.isStopped()) ambience.fadeOut(fadeTicks);
+        fadingAmbiences.removeIf(CanvasLoopingSound::isStopped);
+        if (ambience != null && !ambience.isStopped()) {
+            ambience.fadeOut(fadeTicks);
+            fadingAmbiences.addLast(ambience);
+        }
+        ambience = null;
+        ambienceKey = "";
+        int surplus = AmbienceHandoffPolicy.oldestLoopsToRetire(fadingAmbiences.size());
+        for (int i = 0; i < surplus; i++) {
+            fadingAmbiences.removeFirst().stopImmediately();
+        }
+    }
+
+    private void clearAllAmbience() {
+        if (ambience != null) ambience.stopImmediately();
+        for (CanvasLoopingSound previous : fadingAmbiences) previous.stopImmediately();
+        fadingAmbiences.clear();
+        ambience = null;
+        ambienceKey = "";
     }
 
     private void playCue(String eventPath, float volume, float pitch) {
@@ -570,6 +592,12 @@ final class CanvasFeelClient {
         void fadeOut(int ticks) {
             targetVolume = 0.0f;
             fadeRemaining = Math.max(1, ticks);
+        }
+
+        void stopImmediately() {
+            targetVolume = 0.0f;
+            volume = 0.0f;
+            stop();
         }
 
         @Override
