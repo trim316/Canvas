@@ -1,0 +1,148 @@
+name: Canvas exact release acceptance
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Exact prerelease tag to validate
+        required: true
+        default: v0.2.0-rc.1.8436ace3a148
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canvas-release-acceptance-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  resolve_release:
+    name: Resolve immutable release evidence
+    runs-on: ubuntu-24.04
+    outputs:
+      target_sha: ${{ steps.release.outputs.target_sha }}
+      bundle_sha: ${{ steps.release.outputs.bundle_sha }}
+    steps:
+      - name: Resolve exact tag, target and published asset checksum
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir published
+          gh release download "$RELEASE_TAG" --repo "$REPOSITORY" --dir published --pattern 'Canvas-26.2-PROVEN.zip' --pattern 'RELEASE-AUDIT.json' --pattern 'CANVAS-26.2-SHA256SUMS.txt'
+          TARGET="$(gh api "repos/$REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq .object.sha)"
+          SHA="$(sha256sum published/Canvas-26.2-PROVEN.zip | awk '{print $1}')"
+          grep -q "^$SHA  Canvas-26.2-PROVEN.zip$" published/CANVAS-26.2-SHA256SUMS.txt
+          python3 - "$SHA" "$TARGET" <<'PY'
+          import json,sys
+          r=json.load(open("published/RELEASE-AUDIT.json"))
+          sha,target=sys.argv[1:]
+          assert r["schema"]==1 and r["minecraft"]=="26.2"
+          assert r["proven_bundle"]["sha256"]==sha
+          assert all(r["checks"].values())
+          print("release receipt PASS",target,sha)
+          PY
+          echo "target_sha=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "bundle_sha=$SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-resolution
+          path: published/**
+          if-no-files-found: error
+
+  windows_exact_bundle:
+    name: Exact release Windows install/update/restore
+    needs: resolve_release
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve_release.outputs.target_sha }}
+      - name: Download exact public release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force published | Out-Null
+          gh release download "$env:RELEASE_TAG" --repo "$env:REPOSITORY" --dir published --pattern 'Canvas-26.2-PROVEN.zip' --pattern 'RELEASE-AUDIT.json'
+      - name: Exercise exact published installer and two-level rollback
+        shell: pwsh
+        run: |
+          python scripts/release_windows_acceptance.py published/Canvas-26.2-PROVEN.zip published/RELEASE-AUDIT.json "${{ needs.resolve_release.outputs.bundle_sha }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exact-release-windows-acceptance
+          path: release-acceptance-windows.json
+          if-no-files-found: error
+
+  release_commit_safety:
+    name: Release commit world safety + multiplayer + soak
+    needs: resolve_release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve_release.outputs.target_sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.1"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Re-run exact release safety integration suite
+        run: |
+          python3 scripts/generate_audio.py
+          python3 scripts/verify_invariants.py
+          python3 scripts/verify_compatibility_matrix.py
+          gradle clean build --no-daemon --stacktrace
+      - name: Require release-blocking automated scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          for marker in p3MultiplayerScenarioCampaignCoversSettlementIsolationGatheringAndSharedMemory longSessionSoakKeepsDensityBudgetsBounded saveReloadBackupAndForkIdentityRemainSafe lowEndPerformanceBudgetIsExplicitAndBounded featureDisableReenableRoundTripPreservesExistingWorldMemory; do
+            grep -Rqi "$marker" build/run/gameTest build/test-results || { echo "Missing evidence: $marker"; exit 1; }
+          done
+      - name: Write automated acceptance receipt
+        run: |
+          python3 - <<'PY'
+          import json
+          r={"schema":1,"result":"PASS","release_tag":"${{ env.RELEASE_TAG }}","target_sha":"${{ needs.resolve_release.outputs.target_sha }}","bundle_sha256":"${{ needs.resolve_release.outputs.bundle_sha }}","automated_checks":["source_nonmutation_invariants","real_server_gametests","multiplayer_scenario_campaign","save_reload_backup_fork_isolation","all_features_disable_reenable","bounded_low_end_operation_policy","long_session_density_soak"],"limitations":["hosted runner is not the user's physical PC","multiplayer is deterministic integration rather than two humans","subjective cozy feel is not machine-verifiable"]}
+          open("release-acceptance-automated.json","w").write(json.dumps(r,indent=2,sort_keys=True)+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exact-release-automated-safety
+          path: |
+            release-acceptance-automated.json
+            build/reports/**
+            build/test-results/**
+            build/run/gameTest/**
+          if-no-files-found: error
+
+  acceptance_summary:
+    name: Automated release acceptance gate
+    needs: [resolve_release, windows_exact_bundle, release_commit_safety]
+    runs-on: ubuntu-24.04
+    if: success()
+    steps:
+      - run: |
+          echo "PASS: exact public asset integrity"
+          echo "PASS: exact ZIP Windows install/reinstall/two-level restore"
+          echo "PASS: release-commit real server GameTests and world safety regressions"
+          echo "PASS: deterministic multiplayer, save/fork, feature-off, soak and low-end policies"
+          echo "NOT MACHINE-PROVABLE: subjective human cozy feel / physical-PC frametime"
