@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "scope": "Canvas 26.2 production companion runtime",
+  "minecraft": "26.2",
+  "loader": "fabric",
+  "entries": [
+    {
+      "slug": "coolrain",
+      "role": "weather presentation",
+      "policy": "required",
+      "failure_action": "fail_candidate"
+    },
+    {
+      "slug": "sound-physics-remastered",
+      "role": "acoustic simulation",
+      "policy": "required",
+      "failure_action": "fail_candidate"
+    },
+    {
+      "slug": "ambientsounds",
+      "role": "ambient soundscape",
+      "policy": "trial",
+      "failure_action": "quarantine"
+    },
+    {
+      "slug": "dcme-dynamic-contextual-music-engine",
+      "role": "contextual music integration",
+      "policy": "trial",
+      "failure_action": "quarantine"
+    },
+    {
+      "slug": "sound",
+      "role": "sound support integration",
+      "policy": "trial",
+      "failure_action": "quarantine"
+    },
+    {
+      "slug": "presence-footsteps",
+      "role": "footstep acoustics",
+      "policy": "trial",
+      "failure_action": "quarantine"
+    },
+    {
+      "slug": "particle-rain",
+      "role": "weather particles",
+      "policy": "trial",
+      "failure_action": "quarantine"
+    },
+    {
+      "slug": "visuality",
+      "role": "ambient particles",
+      "policy": "trial",
+      "failure_action": "quarantine"
+    }
+  ]
+}

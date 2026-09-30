@@ -21,3 +21,8 @@ Every current experience family defaults to `true` and can be disabled independe
 - `family.community`
 
 These switches disable Canvas interpretation/presentation for the selected family. They do not mutate world blocks, terrain, entities, or vanilla mechanics.
+
+
+## Companion compatibility
+
+The production companion contract is checked in at `compatibility/companion-matrix.json`. Required companions must pass the production-client launch; trial companions may be automatically quarantined if incompatible. The proven playtest bundle includes both this matrix and the exact CI admission report used for that candidate.

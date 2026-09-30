@@ -57,6 +57,6 @@ This file is the durable queue for the hourly Canvas development automation. The
 - [x] Long-session soak. Implemented in alpha.32 as a deterministic 30-Minecraft-day orchestration soak covering every moment kind, repeated suppression pressure, and hard verification that presentation/music density ceilings never drift; mark proven after full CI is green.
 - [x] Save/reload/backup/fork safety tests. Implemented in alpha.33 with world lineage + branch identity: ordinary reload and same-key backup restore preserve scope, differently keyed forks retain lineage but receive isolated branch scope, and legacy v1 identities migrate forward without losing the world ID; mark proven after full CI is green.
 - [x] Low-end performance budget. Implemented in alpha.34 with hard ceilings for steady loaded-only block probes, broad client entity-query cadence, familiar-mob candidates, villager candidates, and village clustering comparisons; production hot paths are capped and deterministic CI fails if any ceiling is exceeded; mark proven after full CI is green.
-- [ ] Mod compatibility matrix.
+- [x] Mod compatibility matrix. Implemented in alpha.35 as a checked-in Minecraft 26.2 Fabric companion contract distinguishing required integrations from admit-or-quarantine trials; CI proves resolver/admission policy alignment and verifies the actual production-client admission report, and the proven bundle includes both matrix and report with checksums; mark proven after full CI is green.
 - [ ] Proven installer/update path.
 - [ ] Release candidate audit.

@@ -35,6 +35,9 @@ jobs:
       - name: Generate Canvas-owned ambience
         run: python3 scripts/generate_audio.py
 
+      - name: Verify companion compatibility matrix contract
+        run: python3 scripts/verify_compatibility_matrix.py
+
       - name: Set up Gradle 9.5.1
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -107,6 +110,9 @@ jobs:
 
       - name: Automatically admit compatible cozy companions
         run: python3 scripts/admit_companions.py
+
+      - name: Verify runtime companion admission against matrix
+        run: python3 scripts/verify_compatibility_matrix.py ci-evidence/companion-admission.json
 
       - name: Run real Fabric client GameTests
         shell: bash
@@ -187,6 +193,7 @@ jobs:
           echo "- deterministic 30-day long-session density soak"
           echo "- save/reload/backup/fork lineage isolation and legacy identity migration"
           echo "- explicit low-end block/entity observation and clustering budgets"
+          echo "- machine-checked companion compatibility matrix with required/admit-or-quarantine policy"
           echo "- Canvas audio assets loaded without missing-resource warnings"
           echo "- artifact metadata/resources inspection"
 
