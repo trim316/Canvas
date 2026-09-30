@@ -46,6 +46,16 @@ with zipfile.ZipFile(bundle) as z:
         raise SystemExit("installer manifest contains duplicate mod ids")
     if len(filenames) != len(set(filenames)):
         raise SystemExit("installer manifest contains duplicate filenames")
+    physical_mods = {
+        pathlib.PurePosixPath(name).name
+        for name in names
+        if name.startswith("mods/") and name.lower().endswith(".jar")
+    }
+    if physical_mods != set(filenames):
+        raise SystemExit(
+            f"physical bundle mod set differs from manifest: physical={sorted(physical_mods)} "
+            f"manifest={sorted(filenames)}"
+        )
 
     hash_lines = z.read("SHA256SUMS.txt").decode("utf-8").splitlines()
     hashes = {}
