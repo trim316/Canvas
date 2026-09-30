@@ -26,3 +26,8 @@ These switches disable Canvas interpretation/presentation for the selected famil
 ## Companion compatibility
 
 The production companion contract is checked in at `compatibility/companion-matrix.json`. Required companions must pass the production-client launch; trial companions may be automatically quarantined if incompatible. The proven playtest bundle includes both this matrix and the exact CI admission report used for that candidate.
+
+
+## Proven install and update path
+
+The proven bundle contains `INSTALL-CANVAS.cmd` and `RESTORE-CANVAS.cmd` for the Modrinth Fabulously Optimized profile. Installation verifies the bundled manifest, SHA-256 hashes, and Fabric mod IDs before touching the profile, moves replaced mod IDs into a timestamped backup, and rolls back automatically if installation fails. `RESTORE-CANVAS.cmd` restores the latest backup snapshot.
