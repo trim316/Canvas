@@ -1,0 +1,279 @@
+name: Canvas exact release acceptance
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Exact prerelease tag to validate
+        required: true
+        default: v0.2.0-rc.1.8436ace3a148
+
+permissions:
+  contents: write
+
+concurrency:
+  group: canvas-release-acceptance-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  resolve_release:
+    name: Resolve immutable release evidence
+    runs-on: ubuntu-24.04
+    outputs:
+      target_sha: ${{ steps.release.outputs.target_sha }}
+      bundle_sha: ${{ steps.release.outputs.bundle_sha }}
+    steps:
+      - name: Resolve exact tag, target and published asset checksum
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir published
+          gh release download "$RELEASE_TAG" --repo "$REPOSITORY" --dir published --pattern 'Canvas-26.2-PROVEN.zip' --pattern 'RELEASE-AUDIT.json' --pattern 'CANVAS-26.2-SHA256SUMS.txt'
+          TARGET="$(gh api "repos/$REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq .object.sha)"
+          SHA="$(sha256sum published/Canvas-26.2-PROVEN.zip | awk '{print $1}')"
+          grep -q "^$SHA  Canvas-26.2-PROVEN.zip$" published/CANVAS-26.2-SHA256SUMS.txt
+          python3 - "$SHA" "$TARGET" <<'PY'
+          import json,sys
+          r=json.load(open("published/RELEASE-AUDIT.json"))
+          sha,target=sys.argv[1:]
+          assert r["schema"]==1 and r["minecraft"]=="26.2"
+          assert r["proven_bundle"]["sha256"]==sha
+          assert all(r["checks"].values())
+          print("release receipt PASS",target,sha)
+          PY
+          echo "target_sha=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "bundle_sha=$SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-resolution
+          path: published/**
+          if-no-files-found: error
+
+  windows_exact_bundle:
+    name: Exact release Windows install/update/restore
+    needs: resolve_release
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve_release.outputs.target_sha }}
+      - name: Download exact public release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force published | Out-Null
+          gh release download "$env:RELEASE_TAG" --repo "$env:REPOSITORY" --dir published --pattern 'Canvas-26.2-PROVEN.zip' --pattern 'RELEASE-AUDIT.json'
+      - name: Exercise exact published installer and two-level rollback
+        shell: pwsh
+        run: |
+          python scripts/release_windows_acceptance.py published/Canvas-26.2-PROVEN.zip published/RELEASE-AUDIT.json "${{ needs.resolve_release.outputs.bundle_sha }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exact-release-windows-acceptance
+          path: release-acceptance-windows.json
+          if-no-files-found: error
+
+  release_commit_safety:
+    name: Release commit world safety + multiplayer + soak
+    needs: resolve_release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve_release.outputs.target_sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.1"
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Re-run exact release safety integration suite
+        run: |
+          python3 scripts/generate_audio.py
+          python3 scripts/verify_invariants.py
+          python3 scripts/verify_compatibility_matrix.py
+          gradle clean build --no-daemon --stacktrace
+      - name: Require release-blocking automated scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          for marker in p3MultiplayerScenarioCampaignCoversSettlementIsolationGatheringAndSharedMemory longSessionSoakKeepsDensityBudgetsBounded saveReloadBackupAndForkIdentityRemainSafe lowEndPerformanceBudgetIsExplicitAndBounded featureDisableReenableRoundTripPreservesExistingWorldMemory; do
+            grep -Rqi "$marker" build/run/gameTest build/test-results || { echo "Missing evidence: $marker"; exit 1; }
+          done
+      - name: Write automated acceptance receipt
+        run: |
+          python3 - <<'PY'
+          import json
+          r={"schema":1,"result":"PASS","release_tag":"${{ env.RELEASE_TAG }}","target_sha":"${{ needs.resolve_release.outputs.target_sha }}","bundle_sha256":"${{ needs.resolve_release.outputs.bundle_sha }}","automated_checks":["source_nonmutation_invariants","real_server_gametests","multiplayer_scenario_campaign","save_reload_backup_fork_isolation","all_features_disable_reenable","bounded_low_end_operation_policy","long_session_density_soak"],"limitations":["hosted runner is not the user's physical PC","multiplayer is deterministic integration rather than two humans","subjective cozy feel is not machine-verifiable"]}
+          open("release-acceptance-automated.json","w").write(json.dumps(r,indent=2,sort_keys=True)+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exact-release-automated-safety
+          path: |
+            release-acceptance-automated.json
+            build/reports/**
+            build/test-results/**
+            build/run/gameTest/**
+          if-no-files-found: error
+
+  constrained_client:
+    name: Constrained production client acceptance
+    needs: resolve_release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      ALSOFT_DRIVERS: "null"
+      CANVAS_VISUAL_TEST: "true"
+      CANVAS_SEASON_TEST: "winter"
+      CANVAS_SNOW_TEST: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve_release.outputs.target_sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.5.1"
+      - name: Install constrained production-client runtime
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri libgl1 libopenal1 ffmpeg util-linux
+      - name: Resolve and admit exact production companion contract
+        run: |
+          python3 scripts/generate_audio.py
+          python3 scripts/fetch_companions.py
+          python3 scripts/admit_companions.py
+          python3 scripts/verify_compatibility_matrix.py ci-evidence/companion-admission.json
+      - name: Launch production client on one CPU
+        env:
+          CANVAS_COMPANION_DIR: ci-mods-active
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ci-evidence/constrained
+          START="$(date +%s)"
+          set -o pipefail
+          taskset -c 0 gradle runProductionClientGameTest --no-daemon --stacktrace 2>&1 | tee ci-evidence/constrained/console.log
+          END="$(date +%s)"
+          ELAPSED="$((END-START))"
+          echo "$ELAPSED" > ci-evidence/constrained/wall-seconds.txt
+          test "$ELAPSED" -le 1500
+          python3 scripts/verify_log_health.py
+          python3 scripts/verify_client_runtime.py
+      - name: Record constrained-host evidence boundary
+        run: |
+          python3 - <<'PY'
+          import json,pathlib
+          r={"schema":1,"result":"PASS","cpu_affinity":1,
+             "wall_seconds":int(pathlib.Path("ci-evidence/constrained/wall-seconds.txt").read_text()),
+             "environment":"GitHub ubuntu-24.04 hosted runner under taskset -c 0",
+             "meaning":"repeatable constrained-host regression evidence, not a claim about every low-end PC"}
+          pathlib.Path("ci-evidence/constrained/receipt.json").write_text(json.dumps(r,indent=2)+"\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exact-release-constrained-client
+          path: |
+            ci-evidence/constrained/**
+            run/logs/**
+          if-no-files-found: ignore
+
+  publish_stable:
+    name: Publish stable 0.2.0 from accepted exact RC
+    needs: [resolve_release, windows_exact_bundle, release_commit_safety, constrained_client]
+    runs-on: ubuntu-24.04
+    if: success()
+    steps:
+      - name: Download the exact accepted prerelease assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir accepted
+          gh release download "$RELEASE_TAG" --repo "$REPOSITORY" --dir accepted \
+            --pattern 'Canvas-26.2-PROVEN.zip' \
+            --pattern 'RELEASE-AUDIT.json' \
+            --pattern 'CANVAS-26.2-SHA256SUMS.txt'
+          SHA="$(sha256sum accepted/Canvas-26.2-PROVEN.zip | awk '{print $1}')"
+          test "$SHA" = "${{ needs.resolve_release.outputs.bundle_sha }}"
+          grep -q "^$SHA  Canvas-26.2-PROVEN.zip$" accepted/CANVAS-26.2-SHA256SUMS.txt
+      - name: Publish immutable accepted stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_SHA: ${{ needs.resolve_release.outputs.target_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          STABLE="v0.2.0"
+          if gh release view "$STABLE" --repo "$REPOSITORY" >/dev/null 2>&1; then
+            EXISTING="$(gh api "repos/$REPOSITORY/git/ref/tags/$STABLE" --jq .object.sha)"
+            test "$EXISTING" = "$TARGET_SHA" || {
+              echo "Stable tag already exists at a different SHA: $EXISTING"
+              exit 1
+            }
+            echo "Stable release already exists at accepted SHA."
+            exit 0
+          fi
+          cat > accepted/STABLE-NOTES.md <<EOF
+          # Canvas 0.2.0 — Minecraft 26.2 Fabric
+
+          Stable technical release from exact accepted candidate $RELEASE_TAG.
+
+          Automated acceptance passed on the exact public ZIP:
+          - Windows throwaway Modrinth/Fabulously Optimized install, repeat install,
+            rollback to prior release, rollback to original bytes, and extra-restore rejection
+          - exact release checksum and independent audit receipt binding
+          - server GameTests and no-production-mutation invariants
+          - save/reload/backup/fork isolation
+          - deterministic multiplayer settlement/privacy scenarios
+          - all-feature disable/reenable regression
+          - long-session density and bounded low-end operation policies
+          - one-CPU constrained production-client launch with admitted companions
+
+          Human subjective coziness and individual physical-PC performance remain
+          ongoing experiential QA, not evidence fabricated by automation.
+          EOF
+          gh release create "$STABLE" \
+            accepted/Canvas-26.2-PROVEN.zip \
+            accepted/RELEASE-AUDIT.json \
+            accepted/CANVAS-26.2-SHA256SUMS.txt \
+            --repo "$REPOSITORY" --target "$TARGET_SHA" \
+            --title "Canvas 0.2.0 — Minecraft 26.2" \
+            --notes-file accepted/STABLE-NOTES.md \
+            --latest
+
+  acceptance_summary:
+    name: Automated release acceptance gate
+    needs: [resolve_release, windows_exact_bundle, release_commit_safety, constrained_client]
+    runs-on: ubuntu-24.04
+    if: success()
+    steps:
+      - run: |
+          echo "PASS: exact public asset integrity"
+          echo "PASS: exact ZIP Windows install/reinstall/two-level restore"
+          echo "PASS: release-commit real server GameTests and world safety regressions"
+          echo "PASS: deterministic multiplayer, save/fork, feature-off, soak and low-end policies"
+          echo "NOT MACHINE-PROVABLE: subjective human cozy feel / physical-PC frametime"
