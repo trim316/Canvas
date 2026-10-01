@@ -51,7 +51,7 @@ for line in (ROOT / "gradle.properties").read_text(encoding="utf-8").splitlines(
         properties[key.strip()] = value.strip()
 
 version = properties.get("mod_version", "")
-if not version.startswith("0.2.0-rc."):
+if not version.startswith("0.2.1-rc."):
     fail(f"release audit requires rc version, got {version!r}")
 if properties.get("minecraft_version") != "26.2":
     fail("release audit requires Minecraft 26.2")
@@ -68,8 +68,8 @@ for command in [
 with zipfile.ZipFile(jar) as runtime:
     names = set(runtime.namelist())
     meta = json.loads(runtime.read("fabric.mod.json"))
-    if meta.get("id") != "canvas":
-        fail("runtime JAR Fabric id is not canvas")
+    if meta.get("id") != "cozycanvas":
+        fail("runtime JAR Fabric id is not cozycanvas")
     if str(meta.get("version")) != version:
         fail(f"runtime JAR version {meta.get('version')!r} != gradle version {version!r}")
     if meta.get("depends", {}).get("minecraft") != "~26.2":
@@ -124,7 +124,7 @@ with zipfile.ZipFile(bundle) as proven:
             "physical bundled JAR set differs from installer manifest: "
             f"physical={sorted(physical_mod_filenames)} manifest={sorted(packaged_filenames)}"
         )
-    canvas_entries = [entry for entry in packaged_mods if entry.get("mod_id") == "canvas"]
+    canvas_entries = [entry for entry in packaged_mods if entry.get("mod_id") == "cozycanvas"]
     if len(canvas_entries) != 1:
         fail(f"expected exactly one Canvas manifest entry, got {len(canvas_entries)}")
 

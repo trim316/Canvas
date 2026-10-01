@@ -8,7 +8,7 @@ on:
       tag:
         description: Exact prerelease tag to validate
         required: true
-        default: v0.2.0-rc.1.8436ace3a148
+        default: v0.2.1-rc.1.8436ace3a148
 
 permissions:
   contents: write
@@ -219,7 +219,7 @@ jobs:
           if-no-files-found: ignore
 
   publish_stable:
-    name: Publish stable 0.2.0 from accepted exact RC
+    name: Publish stable 0.2.1 from accepted exact RC
     needs: [resolve_release, windows_exact_bundle, release_commit_safety, constrained_client]
     runs-on: ubuntu-24.04
     if: success()
@@ -247,7 +247,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          STABLE="v0.2.0"
+          STABLE="v0.2.1"
           if gh release view "$STABLE" --repo "$REPOSITORY" >/dev/null 2>&1; then
             EXISTING="$(gh api "repos/$REPOSITORY/git/ref/tags/$STABLE" --jq .object.sha)"
             test "$EXISTING" = "$TARGET_SHA" || {
@@ -258,7 +258,7 @@ jobs:
             exit 0
           fi
           cat > accepted/STABLE-NOTES.md <<EOF
-          # Canvas 0.2.0 — Minecraft 26.2 Fabric
+          # Canvas 0.2.1 — Minecraft 26.2 Fabric
 
           Stable technical release from exact accepted candidate $RELEASE_TAG.
 
@@ -281,7 +281,7 @@ jobs:
             accepted/RELEASE-AUDIT.json \
             accepted/CANVAS-26.2-SHA256SUMS.txt \
             --repo "$REPOSITORY" --target "$TARGET_SHA" \
-            --title "Canvas 0.2.0 — Minecraft 26.2" \
+            --title "Canvas 0.2.1 — Minecraft 26.2" \
             --notes-file accepted/STABLE-NOTES.md \
             --latest
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "canvas",
+  "id": "cozycanvas",
   "version": "${version}",
   "name": "Canvas",
   "description": "Cozy, context-aware, non-destructive vanilla+ runtime for Minecraft 26.2.",

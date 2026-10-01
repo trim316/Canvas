@@ -121,6 +121,17 @@ if not exist "%MODS%" (
 >>"%PS1%" echo     try { return (($reader.ReadToEnd() ^| ConvertFrom-Json).id) } finally { $reader.Dispose() }
 >>"%PS1%" echo   } finally { $zip.Dispose() }
 >>"%PS1%" echo }
+>>"%PS1%" echo function Test-LegacyCanvas([string]$jar) {
+>>"%PS1%" echo   $zip = [IO.Compression.ZipFile]::OpenRead($jar)
+>>"%PS1%" echo   try {
+>>"%PS1%" echo     $entry = $zip.GetEntry('fabric.mod.json')
+>>"%PS1%" echo     if ($null -eq $entry) { return $false }
+>>"%PS1%" echo     $reader = New-Object IO.StreamReader($entry.Open())
+>>"%PS1%" echo     try { $meta = ($reader.ReadToEnd() ^| ConvertFrom-Json) } finally { $reader.Dispose() }
+>>"%PS1%" echo     if ($meta.id -ne 'canvas' -or $meta.version -ne '0.2.0-rc.1') { return $false }
+>>"%PS1%" echo     return @($meta.entrypoints.main) -contains 'net.canvasmod.CanvasMod'
+>>"%PS1%" echo   } finally { $zip.Dispose() }
+>>"%PS1%" echo }
 >>"%PS1%" echo foreach ($entry in $manifest.mods) {
 >>"%PS1%" echo   $path = Join-Path $incoming $entry.filename
 >>"%PS1%" echo   if (!(Test-Path $path)) { throw "Incoming mod missing: $($entry.filename)" }
@@ -136,7 +147,7 @@ if not exist "%MODS%" (
 >>"%PS1%" echo try {
 >>"%PS1%" echo   foreach ($old in Get-ChildItem $mods -Filter '*.jar') {
 >>"%PS1%" echo     try { $id = Get-ModId $old.FullName } catch { continue }
->>"%PS1%" echo     if ($id -and $ids.ContainsKey($id)) {
+>>"%PS1%" echo     if (($id -and $ids.ContainsKey($id)) -or (Test-LegacyCanvas $old.FullName)) {
 >>"%PS1%" echo       $dest = Join-Path $backup $old.Name
 >>"%PS1%" echo       Move-Item -Force $old.FullName $dest
 >>"%PS1%" echo       $moved += $dest

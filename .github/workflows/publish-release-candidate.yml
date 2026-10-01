@@ -2,7 +2,7 @@ name: Publish validated Canvas release candidate
 
 # This workflow never publishes a stable release. It distributes the EXACT
 # bundle produced by the successful full Minecraft CI run on current main.
-# The stable 0.2.0 release remains blocked on documented real Windows FEEL,
+# The stable 0.2.1 release remains blocked on documented real Windows FEEL,
 # low-end, forever-world backup/restore, and multiplayer acceptance.
 on:
   workflow_run:
@@ -62,7 +62,7 @@ jobs:
           receipt = json.loads(Path("published/RELEASE-AUDIT.json").read_text())
           actual = hashlib.sha256(bundle.read_bytes()).hexdigest()
           assert receipt.get("schema") == 1
-          assert receipt.get("release_version") == "0.2.0-rc.1"
+          assert receipt.get("release_version") == "0.2.1-rc.1"
           assert receipt.get("minecraft") == "26.2"
           assert receipt.get("proven_bundle", {}).get("sha256") == actual
           assert all(receipt.get("checks", {}).values()), "Audit receipt contains a failed check"
@@ -79,7 +79,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG="v0.2.0-rc.1.${TESTED_SHA:0:12}"
+          TAG="v0.2.1-rc.1.${TESTED_SHA:0:12}"
           # Each verified commit has at most one prerelease: a rerun never
           # replaces a previously published binary without audit.
           if gh release view "$TAG" --repo "$REPOSITORY" >/dev/null 2>&1; then
@@ -87,7 +87,7 @@ jobs:
             exit 0
           fi
           cat > published/RELEASE-NOTES.md <<EOF
-          # Canvas 0.2.0 release candidate for Minecraft 26.2 Fabric
+          # Canvas 0.2.1 release candidate for Minecraft 26.2 Fabric
 
           This is a **prerelease for backed-up Windows playtesting**, not a
           final certified release. It is built from exact commit $TESTED_SHA,
@@ -109,7 +109,7 @@ jobs:
             published/RELEASE-AUDIT.json \
             published/CANVAS-26.2-SHA256SUMS.txt \
             --repo "$REPOSITORY" --target "$TESTED_SHA" \
-            --title "Canvas 0.2.0 release candidate (${TESTED_SHA:0:12})" \
+            --title "Canvas 0.2.1 release candidate (${TESTED_SHA:0:12})" \
             --notes-file published/RELEASE-NOTES.md \
             --prerelease --latest=false
 
